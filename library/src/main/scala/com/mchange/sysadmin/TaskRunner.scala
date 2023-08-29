@@ -11,6 +11,11 @@ import scala.jdk.CollectionConverters.*
 
 object TaskRunner:
 
+  def default(from : String, to : String) : TaskRunner =
+    new TaskRunner with TaskRunner.SmtpLogging(from=from,to=to) with TaskRunner.ReportLogging()
+
+  lazy val stdoutOnly: TaskRunner = new TaskRunner.ReportLogging(){}
+
   trait LineLogging( lines : Task.Run => Iterable[String], sink : String => Unit ) extends TaskRunner:
     abstract override def sendReports( taskRun : Task.Run ) : Unit =
       super.sendReports( taskRun )
@@ -19,6 +24,15 @@ object TaskRunner:
       catch
         case NonFatal(t) => t.printStackTrace
   end LineLogging
+
+  trait ReportLogging( report : Task.Run => String = defaultVerticalMessage, sink : String => Unit = (text : String) => println(text) ) extends TaskRunner:
+    abstract override def sendReports( taskRun : Task.Run ) : Unit =
+      super.sendReports( taskRun )
+      try
+        sink(report( taskRun ))
+      catch
+        case NonFatal(t) => t.printStackTrace
+  end ReportLogging
 
   object SmtpLogging:
     object Prop:
@@ -76,7 +90,7 @@ object TaskRunner:
       debug    : Boolean = false
     )
   // see https://stackoverflow.com/questions/1990454/using-javamail-to-connect-to-gmail-smtp-server-ignores-specified-port-and-tries
-  trait SmtpLogging( from : String, to : String, subject : Task.Run => String, text : Task.Run => String)(using context : SmtpLogging.Context) extends TaskRunner:
+  trait SmtpLogging( from : String, to : String, subject : Task.Run => String = defaultTitle, text : Task.Run => String = defaultVerticalMessage)(using context : SmtpLogging.Context) extends TaskRunner:
     val props =
       import SmtpLogging.Prop
       val tmp = new Properties()

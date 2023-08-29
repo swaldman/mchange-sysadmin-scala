@@ -2,6 +2,11 @@ package com.mchange.sysadmin
 
 import scala.collection.*
 import com.mchange.codegenutil.*
+import java.time.{Instant,ZoneId}
+import java.time.temporal.ChronoUnit
+import java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME
+
+import scala.util.control.NonFatal
 
 class SysadminException( message : String, cause : Throwable = null ) extends Exception(message, cause)
 
@@ -13,31 +18,56 @@ def extractFullStackTrace(t:Throwable) : String =
 extension (t : Throwable)
   def fullStackTrace : String = extractFullStackTrace(t)
 
+lazy val hostname : Option[String] =
+  try
+    Some(os.proc("hostname").call( check=false, stdout = os.Pipe, stderr = os.Pipe ).out.trim())
+  catch
+    case NonFatal(t) =>  None
+
+def timestamp =
+  val now = Instant.now.truncatedTo( ChronoUnit.SECONDS ).atZone(ZoneId.systemDefault())
+  ISO_OFFSET_DATE_TIME.format(now)
+
+def defaultTitle( run : Task.Run ) =
+  hostname.fold("TASK")(hn => "[" + hn + "]") + ": " + run.task.name + " -- " + (if run.success then "SUCCEEDED" else "FAILED")
+
 def defaultVerticalMessage( run : Task.Run ) =
-  // SEQUENTIAL and CLEANUPS start with two newlines,
-  // the output does not have those long sections on the same
-  // lines as their tags
-  s"""|==================================
-      | TASK: ${run.task.name}
-      |==================================
-      |
-      | Succeeded overall? ${run.success}
-      |
-      | SEQUENTIAL: ${defaultVerticalMessageSequential(run.sequential)}
-      |
-      |
-      | CLEANUPS: ${defaultVerticalMessageBestAttemptCleanups(run.bestAttemptCleanUps)}
-      |
-      |==================================""".stripMargin.trim
+  val mainSection =
+    s"""|=====================================================================
+        | ${defaultTitle(run)}
+        |=====================================================================
+        | Timestamp: ${timestamp}
+        | Succeeded overall? ${if run.success then "Yes" else "No"}
+        |
+        | SEQUENTIAL:
+        |${defaultVerticalMessageSequential(run.sequential)}""".stripMargin.trim + LineSep + LineSep
+
+  def cleanupsSectionIfNecessary =
+    s"""|-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+        |
+        | BEST-ATTEMPT CLEANUPS:
+        |${defaultVerticalMessageBestAttemptCleanups(run.bestAttemptCleanUps)}""".stripMargin.trim
+
+  val midsection = if run.bestAttemptCleanUps.isEmpty then "" else (cleanupsSectionIfNecessary + LineSep + LineSep)
+
+  val footer =
+    s"""|
+        |=====================================================================
+        |.   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .""".stripMargin.trim + LineSep
+
+  mainSection + midsection + footer
+
 
 def defaultVerticalMessageSequential( sequential : List[Step.Run] ) : String =
   val tups = immutable.LazyList.from(1).zip(sequential)
-  tups.foldLeft(""): (accum, next) =>
+  val untrimmed = tups.foldLeft(""): (accum, next) =>
     accum + (LineSep*2) + defaultVerticalMessage(next)
+  untrimmed.trim
 
 def defaultVerticalMessageBestAttemptCleanups( bestAttemptCleanups : List[Step.Run] ) : String =
-  bestAttemptCleanups.foldLeft(""): (accum, next) =>
+  val untrimmed = bestAttemptCleanups.foldLeft(""): (accum, next) =>
     accum + (LineSep*2) + defaultVerticalMessage(next)
+  untrimmed.trim
 
 def defaultVerticalMessage( run : Step.Run ) : String = defaultVerticalMessage(None, run)
 
@@ -52,11 +82,11 @@ def defaultVerticalMessage( index : Option[Int], run : Step.Run ) : String =
     case completed : Step.Run.Completed => defaultVerticalBody(completed)
     case skipped   : Step.Run.Skipped   => defaultVerticalBody(skipped)
   val header =
-    s"""|----------------------------------
+    s"""|---------------------------------------------------------------------
         | ${index.fold(run.step.name)(i => i.toString + ". " + run.step.name)}
-        |----------------------------------
+        |---------------------------------------------------------------------
         | ${action(run.step)}
-        | Succeeded? ${run.success}""".stripMargin.trim
+        | Succeeded? ${if run.success then "Yes" else "No"}""".stripMargin.trim
   header + LineSep + body
 
 def defaultVerticalBody(completed : Step.Run.Completed) : String =
@@ -74,7 +104,7 @@ def defaultVerticalBody(completed : Step.Run.Completed) : String =
       |${increaseIndent(5)(stdOutContent)}
       |
       | stderr:
-      |${increaseIndent(5)(stdErrContent)}""".stripMargin.trim
+      |${increaseIndent(5)(stdErrContent)}""".stripMargin // don't trim, we want the initial space
 
 // Leave this stuff out
 // We end up mailing sensitive stuff from the environment

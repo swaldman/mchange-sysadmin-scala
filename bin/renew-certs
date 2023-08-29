@@ -23,5 +23,5 @@ val task = new Task:
 
 def writeSubject( run : Task.Run ) : String = s"Sysadmin task: ${task.name}"
 
-val taskRunner = new TaskRunner with TaskRunner.SmtpLogging(from="sysadmin@mchange.com",to="sysadmin@mchange.com",subject=writeSubject,text=defaultVerticalMessage)
+val taskRunner = TaskRunner.default(from="sysadmin@mchange.com",to="sysadmin@mchange.com")
 taskRunner.runAndReport(task)

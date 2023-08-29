@@ -27,7 +27,7 @@ object Step:
           try
             step match
               case exec : Step.Exec =>
-                val tmp = os.proc(exec.parsedCommand).call( cwd = exec.workingDirectory, env = exec.environment, check = false, stdin = os.Pipe, stderr = os.Pipe )
+                val tmp = os.proc(exec.parsedCommand).call( cwd = exec.workingDirectory, env = exec.environment, check = false, stdin = os.Pipe, stdout = os.Pipe, stderr = os.Pipe )
                 Step.Result( tmp.exitCode, tmp.out.trim(), tmp.err.trim() )
               case internal : Step.Internal =>
                 internal.action()
