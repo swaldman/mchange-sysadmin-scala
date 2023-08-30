@@ -118,7 +118,7 @@ def defaultVerticalBody(completed : Step.Run.Completed) : String =
 
 def defaultVerticalBody(skipped : Step.Run.Skipped) : String =
   s"""|
-      | SKIPPED!""".stripMargin.trim
+      | SKIPPED!""".stripMargin // don't trip, we want the linefeed and initial space
 
 
 
