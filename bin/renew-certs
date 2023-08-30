@@ -13,7 +13,7 @@ val task = new Task:
   val name = "Renew certs"
   val sequential = List(
     Step.Exec("Stop nginx", List("systemctl", "stop", "nginx")),
-    Step.Exec("Renew certs", List("certbot", "renew", "-n", "--standalone", "--dry-run"), isSuccess = _ => true), // it's okay if some certs fail
+    Step.Exec("Renew certs", List("certbot", "renew", "--standalone"), isSuccess = _ => true), // it's okay if some certs fail
   )
   val bestAttemptCleanups = List(
     Step.Exec("Restart nginx", List("systemctl","restart","nginx"))
