@@ -128,12 +128,12 @@ trait TaskRunner:
   def silentRun( task : Task ) : Task.Run =
     val seqRunsReversed = task.sequential.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
       accum match
-        case Nil => Step.Run.Completed(next) :: accum
-        case head :: tail if head.success => Step.Run.Completed(next) :: accum
+        case Nil => Step.Run.Completed(None, next) :: accum
+        case (head : Step.Run.Completed) :: tail if head.success => Step.Run.Completed(Some(head), next) :: accum
         case other => Step.Run.Skipped(next) :: accum
 
     val bestEffortReversed = task.bestAttemptCleanups.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
-      Step.Run.Completed(next) :: accum
+      Step.Run.Completed(None,next) :: accum
 
     Task.Run(task,seqRunsReversed.reverse,bestEffortReversed.reverse)
 

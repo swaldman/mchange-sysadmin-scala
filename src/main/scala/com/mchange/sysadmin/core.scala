@@ -77,7 +77,7 @@ def defaultVerticalMessage( index : Option[Int], run : Step.Run ) : String =
   def action( step : Step ) : String =
     step match
       case exec : Step.Exec => s"Parsed command: ${exec.parsedCommand}"
-      case internal : Step.Internal => "Action: <internal function>"
+      case arbitrary : Step.Arbitrary => "Action: <internal function>"
   val body = run match
     case completed : Step.Run.Completed => defaultVerticalBody(completed)
     case skipped   : Step.Run.Skipped   => defaultVerticalBody(skipped)
@@ -90,21 +90,25 @@ def defaultVerticalMessage( index : Option[Int], run : Step.Run ) : String =
   header + LineSep + body
 
 def defaultVerticalBody(completed : Step.Run.Completed) : String =
-  def afterExitCode( step : Step ) : String =
-    step match
-      case exec : Step.Exec => ""
-      case internal : Step.Internal => "(notional)"
   val stdOutContent =
     if completed.result.stepOut.nonEmpty then completed.result.stepOut else "<EMPTY>"
   val stdErrContent =
     if completed.result.stepErr.nonEmpty then completed.result.stepErr else "<EMPTY>"
-  s"""| Exit Code: ${completed.result.exitCode} ${afterExitCode(completed.step)}
-      |
-      | stdout:
-      |${increaseIndent(5)(stdOutContent)}
-      |
-      | stderr:
-      |${increaseIndent(5)(stdErrContent)}""".stripMargin // don't trim, we want the initial space
+  val mbExitCode = completed.result.exitCode.fold(""): code =>
+    s"""| Exit code: ${code}
+        |
+        |""".stripMargin // don't trim, we want the initial space
+  val stdOutStdErr =
+    s"""| stdout:
+        |${increaseIndent(5)(stdOutContent)}
+        |
+        | stderr:
+        |${increaseIndent(5)(stdErrContent)}""".stripMargin // don't trim, we want the initial space
+  val mbCarryForward = completed.result.carryForward.fold(""): cf =>
+    s"""|
+        | carryforward:
+        |${increaseIndent(5)(cf.toString)}""".stripMargin
+  mbExitCode + stdOutStdErr + mbCarryForward    
 
 // Leave this stuff out
 // We end up mailing sensitive stuff from the environment
