@@ -4,28 +4,36 @@ import scala.collection.*
 import scala.util.control.NonFatal
 
 object Step:
-  def arbitraryExec( arbitrary : Arbitrary, command : os.Shellable, carryForward : (Int, String, String) => Option[Any] ) =
-    val tmp = os.proc(command).call( cwd = arbitrary.workingDirectory, env = arbitrary.environment, check = false, stdin = os.Pipe, stdout = os.Pipe, stderr = os.Pipe )
+  def arbitraryExec( prior : Option[Step.Run.Completed], thisStep : Arbitrary, command : os.Shellable, carryForward : (Option[Step.Run.Completed], Int, String, String) => Option[Any] ) : Step.Result =
+    val tmp = os.proc(command).call( cwd = thisStep.workingDirectory, env = thisStep.environment, check = false, stdin = os.Pipe, stdout = os.Pipe, stderr = os.Pipe )
     val exitCode = tmp.exitCode
     val stepOut = tmp.out.trim()
     val stepErr = tmp.err.trim()
-    Step.Result( Some(exitCode), stepOut, stepErr, carryForward( tmp.exitCode, tmp.out.trim(), tmp.err.trim() ) )
+    Step.Result( Some(exitCode), stepOut, stepErr, carryForward( prior, tmp.exitCode, tmp.out.trim(), tmp.err.trim() ) )
+  def arbitraryExec( prior : Option[Step.Run.Completed], thisStep : Arbitrary, command : os.Shellable ) : Step.Result = arbitraryExec( prior, thisStep, command, (_,_,_,_) => None )
+  object Result:
+    val empty = Result(None,"","",None)
   case class Result(exitCode: Option[Int], stepOut : String, stepErr : String, carryForward : Option[Any])
   def exitCodeIsZero(run : Step.Run.Completed) : Boolean = run.result.exitCode.fold(false)( _ == 0 )
+  def carryForwardNonEmpty(run : Step.Run.Completed) : Boolean = run.result.carryForward.nonEmpty
+  def stepErrIsEmpty(run : Step.Run.Completed) : Boolean = run.result.stepErr.isEmpty
+  def exitCodeIsZeroAndCarryForwardNonEmpty(run : Step.Run.Completed) = exitCodeIsZero(run) && carryForwardNonEmpty(run)
   case class Arbitrary (
     name : String,
     action : (Option[Step.Run.Completed], Arbitrary) => Result,
     isSuccess : Step.Run.Completed => Boolean,
     workingDirectory : os.Path = os.pwd,
     environment : immutable.Map[String,String] = sys.env,
-  ) extends Step
+  ) extends Step:
+    override def toString() = s"Step.Arbitrary(name=${name}, workingDirectory=${workingDirectory}, environment=********)"
   case class Exec (
     name : String,
     parsedCommand : List[String],
     isSuccess : Step.Run.Completed => Boolean = exitCodeIsZero,
     workingDirectory : os.Path = os.pwd,
     environment : immutable.Map[String,String] = sys.env,
-  ) extends Step
+  ) extends Step:
+    override def toString() = s"Step.Exec(name=${name}, parsedCommand=${parsedCommand}, workingDirectory=${workingDirectory}, environment=********)"
   object Run:
     object Completed:
       def apply( prior : Option[Completed], step : Step ) : Completed =

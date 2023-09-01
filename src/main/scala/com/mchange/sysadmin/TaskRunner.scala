@@ -133,7 +133,8 @@ trait TaskRunner:
         case other => Step.Run.Skipped(next) :: accum
 
     val bestEffortReversed = task.bestAttemptCleanups.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
-      Step.Run.Completed(None,next) :: accum
+      val lastCompleted = seqRunsReversed.collect { case completed : Step.Run.Completed => completed }.headOption
+      Step.Run.Completed(lastCompleted,next) :: accum
 
     Task.Run(task,seqRunsReversed.reverse,bestEffortReversed.reverse)
 
