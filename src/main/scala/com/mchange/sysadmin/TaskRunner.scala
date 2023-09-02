@@ -10,140 +10,14 @@ import scala.jdk.CollectionConverters.*
 import com.mchange.codegenutil.*
 
 object TaskRunner:
-  object Run:
-    def usualSuccessCriterion(run : Run) = run.sequential.isEmpty || run.sequential.last.success
-  trait Run:
-    def name : String
-    def sequential : List[Step.Run]
-    def bestAttemptCleanUps : List[Step.Run]
-    def success : Boolean
-
-  object Step:
-    sealed trait Result:
-      def exitCode: Option[Int]
-      def stepOut : String
-      def stepErr : String
-      def carryForwardDescription : Option[String]
-    end Result
-    object Run:
-      sealed trait Completed extends Run:
-        def result : Result
-      sealed trait Skipped extends Run
-    sealed trait Run:
-      def step         : Step
-      def success      : Boolean
-  sealed trait Step:
-    def name              : String
-    def environment       : Map[String,String]
-    def workingDirectory  : os.Path
-    def actionDescription : String
-  end Step
-
-      //def default(from : String, to : String) : TaskRunner =
-      //  new TaskRunner with TaskRunner.SmtpLogging(from=from,to=to) with TaskRunner.ReportLogging()
-
-      // def stdoutOnly: TaskRunner = new TaskRunner.ReportLogging(){}
 
 
-    /*
-    object Reporting:
-      def defaultTitle( run : Task.Run ) =
-        hostname.fold("TASK")(hn => "[" + hn + "]") + ": " + run.name + " -- " + (if run.success then "SUCCEEDED" else "FAILED")
+  //def default(from : String, to : String) : TaskRunner =
+  //  new TaskRunner with TaskRunner.SmtpLogging(from=from,to=to) with TaskRunner.ReportLogging()
 
-      def defaultVerticalMessage( run : Task.Run ) =
-        val mainSection =
-          s"""|=====================================================================
-              | ${defaultTitle(run)}
-              |=====================================================================
-              | Timestamp: ${timestamp}
-              | Succeeded overall? ${if run.success then "Yes" else "No"}
-              |
-              | SEQUENTIAL:
-              |${defaultVerticalMessageSequential(run.sequential)}""".stripMargin.trim + LineSep + LineSep
+  // def stdoutOnly: TaskRunner = new TaskRunner.ReportLogging(){}
 
-        def cleanupsSectionIfNecessary =
-          s"""|-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-              |
-              | BEST-ATTEMPT CLEANUPS:
-              |${defaultVerticalMessageBestAttemptCleanups(run.bestAttemptCleanUps)}""".stripMargin.trim
 
-        val midsection = if run.bestAttemptCleanUps.isEmpty then "" else (cleanupsSectionIfNecessary + LineSep + LineSep)
-
-        val footer =
-          s"""|
-              |=====================================================================
-              |.   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .""".stripMargin.trim + LineSep
-
-        mainSection + midsection + footer
-
-      def defaultVerticalMessageSequential( sequential : List[Task.Step.Run] ) : String =
-        val tups = immutable.LazyList.from(1).zip(sequential)
-        val untrimmed = tups.foldLeft(""): (accum, next) =>
-          accum + (LineSep*2) + defaultVerticalMessage(next)
-        untrimmed.trim
-
-      def defaultVerticalMessageBestAttemptCleanups( bestAttemptCleanups : List[Task.Step.Run] ) : String =
-        val untrimmed = bestAttemptCleanups.foldLeft(""): (accum, next) =>
-          accum + (LineSep*2) + defaultVerticalMessage(next)
-        untrimmed.trim
-
-      def defaultVerticalMessage( run : Task.Step.Run ) : String = defaultVerticalMessage(None, run)
-
-      def defaultVerticalMessage( tup : Tuple2[Int,Task.Step.Run]) : String = defaultVerticalMessage(Some(tup(0)),tup(1))
-
-      def defaultVerticalMessage( index : Option[Int], run : Task.Step.Run ) : String =
-  //      def action( step : Step ) : String =
-  //        step match
-  //          case exec : Step.Exec => s"Parsed command: ${exec.parsedCommand}"
-  //          case arbitrary : Step.Arbitrary => "Action: <internal function>"
-        val body = run match
-          case completed : Step.Run.Completed => defaultVerticalBody(completed)
-          case skipped   : Step.Run.Skipped   => defaultVerticalBody(skipped)
-        val header =
-          s"""|---------------------------------------------------------------------
-              | ${index.fold(run.step.name)(i => i.toString + ". " + run.step.name)}
-              |---------------------------------------------------------------------
-              | ${run.step.actionDescription}
-              | Succeeded? ${if run.success then "Yes" else "No"}""".stripMargin.trim
-        header + LineSep + body
-
-      def defaultVerticalBody(completed : Task.Step.Run.Completed) : String =
-        val stdOutContent =
-          if completed.result.stepOut.nonEmpty then completed.result.stepOut else "<EMPTY>"
-        val stdErrContent =
-          if completed.result.stepErr.nonEmpty then completed.result.stepErr else "<EMPTY>"
-        val mbExitCode = completed.result.exitCode.fold(""): code =>
-          s"""| Exit code: ${code}
-              |
-              |""".stripMargin // don't trim, we want the initial space
-        val stdOutStdErr =
-          s"""| stdout:
-              |${increaseIndent(5)(stdOutContent)}
-              |
-              | stderr:
-              |${increaseIndent(5)(stdErrContent)}""".stripMargin // don't trim, we want the initial space
-        val mbCarryForward = completed.result.carryForwardDescription.fold(""): cfd =>
-          s"""|
-              | carryforward:
-              |${increaseIndent(5)(cfd)}""".stripMargin
-        mbExitCode + stdOutStdErr + mbCarryForward
-
-      // Leave this stuff out
-      // We end up mailing sensitive stuff from the environment
-      //
-      //      |
-      //      | Working directory:
-      //      |${increaseIndent(5)(completed.step.workingDirectory.toString)}
-      //      |
-      //      | Environment:
-      //      |${increaseIndent(5)(pprint.PPrinter.BlackWhite(completed.step.environment).plainText)}"""
-
-      def defaultVerticalBody(skipped : Task.Step.Run.Skipped) : String =
-        s"""|
-            | SKIPPED!""".stripMargin // don't trip, we want the linefeed and initial space
-
-    end Reporting
-    */
     /*
     trait LineLogging[T]( lines : Task[T]#Run => Iterable[String], sink : String => Unit ) extends Task[T]:
       abstract override def sendReports( taskRun : Run ) : Unit =
@@ -256,42 +130,139 @@ object TaskRunner:
 end TaskRunner
 
 trait TaskRunner[T]:
+  object Reporting:
+    def defaultTitle( run : Task.Run ) =
+      hostname.fold("TASK")(hn => "[" + hn + "]") + ": " + run.task.name + " -- " + (if run.success then "SUCCEEDED" else "FAILED")
+
+    def defaultVerticalMessage( run : Task.Run ) =
+      val mainSection =
+        s"""|=====================================================================
+            | ${defaultTitle(run)}
+            |=====================================================================
+            | Timestamp: ${timestamp}
+            | Succeeded overall? ${if run.success then "Yes" else "No"}
+            |
+            | SEQUENTIAL:
+            |${defaultVerticalMessageSequential(run.sequential)}""".stripMargin.trim + LineSep + LineSep
+
+      def cleanupsSectionIfNecessary =
+        s"""|-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+            |
+            | BEST-ATTEMPT CLEANUPS:
+            |${defaultVerticalMessageBestAttemptCleanups(run.bestAttemptCleanUps)}""".stripMargin.trim
+
+      val midsection = if run.bestAttemptCleanUps.isEmpty then "" else (cleanupsSectionIfNecessary + LineSep + LineSep)
+
+      val footer =
+        s"""|
+            |=====================================================================
+            |.   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .""".stripMargin.trim + LineSep
+
+      mainSection + midsection + footer
+
+    def defaultVerticalMessageSequential( sequential : List[Step.Run] ) : String =
+      val tups = immutable.LazyList.from(1).zip(sequential)
+      val untrimmed = tups.foldLeft(""): (accum, next) =>
+        accum + (LineSep*2) + defaultVerticalMessage(next)
+      untrimmed.trim
+
+    def defaultVerticalMessageBestAttemptCleanups( bestAttemptCleanups : List[Step.Run] ) : String =
+      val untrimmed = bestAttemptCleanups.foldLeft(""): (accum, next) =>
+        accum + (LineSep*2) + defaultVerticalMessage(next)
+      untrimmed.trim
+
+    def defaultVerticalMessage( run : Step.Run ) : String = defaultVerticalMessage(None, run)
+
+    def defaultVerticalMessage( tup : Tuple2[Int,Step.Run]) : String = defaultVerticalMessage(Some(tup(0)),tup(1))
+
+    def defaultVerticalMessage( index : Option[Int], run : Step.Run ) : String =
+//      def action( step : Step ) : String =
+//        step match
+//          case exec : Step.Exec => s"Parsed command: ${exec.parsedCommand}"
+//          case arbitrary : Step.Arbitrary => "Action: <internal function>"
+      val body = run match
+        case completed : Step.Run.Completed => defaultVerticalBody(completed)
+        case skipped   : Step.Run.Skipped   => defaultVerticalBody(skipped)
+      val header =
+        s"""|---------------------------------------------------------------------
+            | ${index.fold(run.step.name)(i => i.toString + ". " + run.step.name)}
+            |---------------------------------------------------------------------
+            | ${run.step.actionDescription}
+            | Succeeded? ${if run.success then "Yes" else "No"}""".stripMargin.trim
+      header + LineSep + body
+
+    def defaultVerticalBody(completed : Step.Run.Completed) : String =
+      val stdOutContent =
+        if completed.result.stepOut.nonEmpty then completed.result.stepOut else "<EMPTY>"
+      val stdErrContent =
+        if completed.result.stepErr.nonEmpty then completed.result.stepErr else "<EMPTY>"
+      val mbExitCode = completed.result.exitCode.fold(""): code =>
+        s"""| Exit code: ${code}
+            |
+            |""".stripMargin // don't trim, we want the initial space
+      val stdOutStdErr =
+        s"""| stdout:
+            |${increaseIndent(5)(stdOutContent)}
+            |
+            | stderr:
+            |${increaseIndent(5)(stdErrContent)}""".stripMargin // don't trim, we want the initial space
+      val mbCarryForward = completed.result.carryForwardDescription.fold(""): cfd =>
+        s"""|
+            | carryforward:
+            |${increaseIndent(5)(cfd)}""".stripMargin
+      mbExitCode + stdOutStdErr + mbCarryForward
+
+    // Leave this stuff out
+    // We end up mailing sensitive stuff from the environment
+    //
+    //      |
+    //      | Working directory:
+    //      |${increaseIndent(5)(completed.step.workingDirectory.toString)}
+    //      |
+    //      | Environment:
+    //      |${increaseIndent(5)(pprint.PPrinter.BlackWhite(completed.step.environment).plainText)}"""
+
+    def defaultVerticalBody(skipped : Step.Run.Skipped) : String =
+      s"""|
+          | SKIPPED!""".stripMargin // don't trip, we want the linefeed and initial space
+
+  end Reporting
+
   type Carrier = (T, Int, String, String) => T
 
-  def arbitraryExec( prior : T, thisStep : TypedStep.Arbitrary, command : os.Shellable, carryForward : Carrier ) : TypedStep.TypedResult =
+  def arbitraryExec( prior : T, thisStep : Step.Arbitrary, command : os.Shellable, carryForward : Carrier ) : Step.Result =
     val tmp = os.proc(command).call( cwd = thisStep.workingDirectory, env = thisStep.environment, check = false, stdin = os.Pipe, stdout = os.Pipe, stderr = os.Pipe )
     val exitCode = tmp.exitCode
     val stepOut = tmp.out.trim()
     val stepErr = tmp.err.trim()
-    TypedStep.TypedResult( Some(exitCode), stepOut, stepErr )( carryForward( prior, tmp.exitCode, tmp.out.trim(), tmp.err.trim() ) )
-  def arbitraryExec( prior : T, thisStep : TypedStep.Arbitrary, command : os.Shellable )(using ev : T =:= Unit) : TypedStep.TypedResult = arbitraryExec( prior, thisStep, command, (_,_,_,_) => ().asInstanceOf[T] )
+    Step.Result( Some(exitCode), stepOut, stepErr, carryForward( prior, tmp.exitCode, tmp.out.trim(), tmp.err.trim() ) )
 
-  object TypedStep:
-    object TypedResult:
+  def arbitraryExec( prior : T, thisStep : Step.Arbitrary, command : os.Shellable )(using ev : T =:= Unit) : Step.Result = arbitraryExec( prior, thisStep, command, (_,_,_,_) => ().asInstanceOf[T] )
+
+  object Step:
+    object Result:
       val defaultCarryForwardDescriber : T => Option[String] =
         case _ : Unit => None
         case other    => Some( other.toString )
-      def emptyWithCarryForward( t : T ) : TypedResult = TypedResult(None,"","")(t)
-    case class TypedResult(
+      def emptyWithCarryForward( t : T ) : Result = Result(None,"","",t)
+    case class Result(
       exitCode: Option[Int],
       stepOut : String,
-      stepErr : String
-    )(
-      val carryForward : T,
-      val carryForwardDescriber : T => Option[String] = defaultCarryForwardDescriber
-    ) extends TaskRunner.Step.Result:
+      stepErr : String,
+      carryForward : T,
+      carryForwardDescriber : T => Option[String] = defaultCarryForwardDescriber
+    ):
       def carryForwardDescription = carryForwardDescriber(carryForward)
-    def exitCodeIsZero(run : TaskRunner.Step.Run.Completed) : Boolean = run.result.exitCode.fold(false)( _ == 0 )
-    def stepErrIsEmpty(run : TaskRunner.Step.Run.Completed) : Boolean = run.result.stepErr.isEmpty
+    def exitCodeIsZero(run : Step.Run.Completed) : Boolean = run.result.exitCode.fold(false)( _ == 0 )
+    def stepErrIsEmpty(run : Step.Run.Completed) : Boolean = run.result.stepErr.isEmpty
     case class Arbitrary (
       name : String,
+      val action : (T, Step.Arbitrary) => Result,
+      val isSuccess : Step.Run.Completed => Boolean,
       workingDirectory : os.Path = os.pwd,
       environment : immutable.Map[String,String] = sys.env,
       actionDescription : String = "Action: <internal function>"
-    )(
-      val action : (T, TypedStep.Arbitrary) => TypedResult,
-      val isSuccess : TypedStep.TypedRun.Completed => Boolean
-    ) extends TypedStep:
+    ) extends Step:
       override def toString() = s"Step.Arbitrary(name=${name}, workingDirectory=${workingDirectory}, environment=********)"
     case class Exec (
       name : String,
@@ -300,69 +271,75 @@ trait TaskRunner[T]:
     )(
       val parsedCommand : List[String],
       val carrier : Carrier,
-      val isSuccess : TypedStep.TypedRun.Completed => Boolean = exitCodeIsZero,
-    ) extends TypedStep:
+      val isSuccess : Step.Run.Completed => Boolean = exitCodeIsZero,
+    ) extends Step:
       def actionDescription = s"Parsed command: ${parsedCommand}"
       override def toString() = s"Step.Exec(name=${name}, parsedCommand=${parsedCommand}, workingDirectory=${workingDirectory}, environment=********)"
-    object TypedRun:
+    object Run:
       object Completed:
-        def apply( prior : T, step : TypedStep ) : TypedStep.TypedRun.Completed =
+        def apply( prior : T, step : Step ) : Step.Run.Completed =
           val result =
             try
               step match
-                case exec : TypedStep.Exec =>
+                case exec : Step.Exec =>
                   val tmp = os.proc(exec.parsedCommand).call( cwd = exec.workingDirectory, env = exec.environment, check = false, stdin = os.Pipe, stdout = os.Pipe, stderr = os.Pipe )
-                  TypedStep.TypedResult( Some(tmp.exitCode), tmp.out.trim(), tmp.err.trim() )( prior )
-                case arbitrary : TypedStep.Arbitrary =>
+                  Step.Result( Some(tmp.exitCode), tmp.out.trim(), tmp.err.trim(), prior )
+                case arbitrary : Step.Arbitrary =>
                   arbitrary.action( prior, arbitrary )
             catch
-              case NonFatal(t) => TypedStep.TypedResult(None,"",t.fullStackTrace)(prior)
-          TypedStep.TypedRun.Completed.apply( step, result )
-      case class Completed( step : TypedStep, result : TypedStep.TypedResult ) extends TypedStep.TypedRun, TaskRunner.Step.Run.Completed:
+              case NonFatal(t) => Step.Result(None,"",t.fullStackTrace, prior)
+          Step.Run.Completed.apply( step, result )
+      case class Completed( step : Step, result : Step.Result ) extends Step.Run:
         def success : Boolean = step.isSuccess(this)
-      case class Skipped( step : TypedStep ) extends TypedStep.TypedRun:
+      case class Skipped( step : Step ) extends Step.Run:
         val success : Boolean = false
-    sealed trait TypedRun extends TaskRunner.Step.Run:
-      def step         : TypedStep
+    sealed trait Run:
+      def step         : Step
       def success      : Boolean
-  sealed trait TypedStep extends TaskRunner.Step:
-    def isSuccess : TypedStep.TypedRun.Completed => Boolean
-  end TypedStep
+  sealed trait Step:
+    def name              : String
+    def environment       : Map[String,String]
+    def workingDirectory  : os.Path
+    def actionDescription : String
+    def isSuccess : Step.Run.Completed => Boolean
+  end Step
 
-  case class TypedRun(
-    name : String,
-    sequential : List[TypedStep.TypedRun],
-    bestAttemptCleanUps : List[TypedStep.TypedRun],
-    isSuccess : TypedRun => Boolean = TaskRunner.Run.usualSuccessCriterion
-  ) extends TaskRunner.Run:
-    def success = isSuccess( this )
-
-  def silentRun(task : Task) : TypedRun =
-    val seqRunsReversed = task.sequential.foldLeft( Nil : List[TypedStep.TypedRun] ): ( accum, next ) =>
+  def silentRun(task : Task) : Task.Run =
+    val seqRunsReversed = task.sequential.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
       accum match
-        case Nil => TypedStep.TypedRun.Completed(task.init, next) :: accum
-        case (head : TypedStep.TypedRun.Completed) :: tail if head.success => TypedStep.TypedRun.Completed(head.result.carryForward, next) :: accum
-        case other => TypedStep.TypedRun.Skipped(next) :: accum
+        case Nil => Step.Run.Completed(task.init, next) :: accum
+        case (head : Step.Run.Completed) :: tail if head.success => Step.Run.Completed(head.result.carryForward, next) :: accum
+        case other => Step.Run.Skipped(next) :: accum
 
-    val bestEffortReversed = task.bestAttemptCleanups.foldLeft( Nil : List[TypedStep.TypedRun] ): ( accum, next ) =>
+    val bestEffortReversed = task.bestAttemptCleanups.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
       val lastCompleted =
         seqRunsReversed
-          .collect { case completed : TypedStep.TypedRun.Completed => completed }
+          .collect { case completed : Step.Run.Completed => completed }
           .headOption
-      TypedStep.TypedRun.Completed(lastCompleted.fold(task.init)(_.result.carryForward),next) :: accum
+      Step.Run.Completed(lastCompleted.fold(task.init)(_.result.carryForward),next) :: accum
 
-    TypedRun(task.name, seqRunsReversed.reverse,bestEffortReversed.reverse)
+    Task.Run(task, seqRunsReversed.reverse,bestEffortReversed.reverse)
 
-  def sendReports( taskRun : TypedRun ) : Unit = ()
+  def sendReports( taskRun : Task.Run ) : Unit = ()
 
   def runAndReport(task : Task) : Unit =
     val run = this.silentRun(task)
     sendReports( run )
 
+  object Task:
+    object Run:
+      def usualSuccessCriterion(run : Run) = run.sequential.isEmpty || run.sequential.last.success
+    case class Run(
+      task : Task,
+      sequential : List[Step.Run],
+      bestAttemptCleanUps : List[Step.Run],
+      isSuccess : Run => Boolean = Run.usualSuccessCriterion
+    ):
+      def success = isSuccess( this )
   trait Task:
     def name                : String
     def init                : T
-    def sequential          : List[TypedStep]
-    def bestAttemptCleanups : List[TypedStep]
+    def sequential          : List[Step]
+    def bestAttemptCleanups : List[Step]
   end Task
 end TaskRunner
