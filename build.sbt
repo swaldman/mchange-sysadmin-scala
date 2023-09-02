@@ -13,7 +13,7 @@ lazy val root = project
   .settings (
     name                     := "mchange-sysadmin-scala",
     scalaVersion             := "3.3.0",
-    // scalacOptions       += "-explain",
+//    scalacOptions            += "-explain",
     resolvers                += Resolver.mavenLocal,
     libraryDependencies      += "com.mchange" %% "codegenutil" % "0.0.2",
     libraryDependencies      += "com.lihaoyi" %% "os-lib"      % "0.9.1",

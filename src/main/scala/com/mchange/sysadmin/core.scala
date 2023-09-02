@@ -28,10 +28,10 @@ def timestamp =
   val now = Instant.now.truncatedTo( ChronoUnit.SECONDS ).atZone(ZoneId.systemDefault())
   ISO_OFFSET_DATE_TIME.format(now)
 
-def defaultTitle( run : Task.Run ) =
+def defaultTitle[T]( run : Task.Run[T] ) =
   hostname.fold("TASK")(hn => "[" + hn + "]") + ": " + run.task.name + " -- " + (if run.success then "SUCCEEDED" else "FAILED")
 
-def defaultVerticalMessage( run : Task.Run ) =
+def defaultVerticalMessage[T]( run : Task.Run[T] ) =
   val mainSection =
     s"""|=====================================================================
         | ${defaultTitle(run)}
@@ -58,29 +58,29 @@ def defaultVerticalMessage( run : Task.Run ) =
   mainSection + midsection + footer
 
 
-def defaultVerticalMessageSequential( sequential : List[Step.Run] ) : String =
+def defaultVerticalMessageSequential[T]( sequential : List[Step.Run[T]] ) : String =
   val tups = immutable.LazyList.from(1).zip(sequential)
   val untrimmed = tups.foldLeft(""): (accum, next) =>
     accum + (LineSep*2) + defaultVerticalMessage(next)
   untrimmed.trim
 
-def defaultVerticalMessageBestAttemptCleanups( bestAttemptCleanups : List[Step.Run] ) : String =
+def defaultVerticalMessageBestAttemptCleanups[T]( bestAttemptCleanups : List[Step.Run[T]] ) : String =
   val untrimmed = bestAttemptCleanups.foldLeft(""): (accum, next) =>
     accum + (LineSep*2) + defaultVerticalMessage(next)
   untrimmed.trim
 
-def defaultVerticalMessage( run : Step.Run ) : String = defaultVerticalMessage(None, run)
+def defaultVerticalMessage[T]( run : Step.Run[T] ) : String = defaultVerticalMessage(None, run)
 
-def defaultVerticalMessage( tup : Tuple2[Int,Step.Run]) : String = defaultVerticalMessage(Some(tup(0)),tup(1))
+def defaultVerticalMessage[T]( tup : Tuple2[Int,Step.Run[T]]) : String = defaultVerticalMessage(Some(tup(0)),tup(1))
 
-def defaultVerticalMessage( index : Option[Int], run : Step.Run ) : String =
-  def action( step : Step ) : String =
+def defaultVerticalMessage[T]( index : Option[Int], run : Step.Run[T] ) : String =
+  def action( step : Step[T] ) : String =
     step match
-      case exec : Step.Exec => s"Parsed command: ${exec.parsedCommand}"
-      case arbitrary : Step.Arbitrary => "Action: <internal function>"
+      case exec : Step.Exec[T] => s"Parsed command: ${exec.parsedCommand}"
+      case arbitrary : Step.Arbitrary[T] => "Action: <internal function>"
   val body = run match
-    case completed : Step.Run.Completed => defaultVerticalBody(completed)
-    case skipped   : Step.Run.Skipped   => defaultVerticalBody(skipped)
+    case completed : Step.Run.Completed[T] => defaultVerticalBody(completed)
+    case skipped   : Step.Run.Skipped[T]   => defaultVerticalBody(skipped)
   val header =
     s"""|---------------------------------------------------------------------
         | ${index.fold(run.step.name)(i => i.toString + ". " + run.step.name)}
@@ -89,7 +89,7 @@ def defaultVerticalMessage( index : Option[Int], run : Step.Run ) : String =
         | Succeeded? ${if run.success then "Yes" else "No"}""".stripMargin.trim
   header + LineSep + body
 
-def defaultVerticalBody(completed : Step.Run.Completed) : String =
+def defaultVerticalBody[T](completed : Step.Run.Completed[T]) : String =
   val stdOutContent =
     if completed.result.stepOut.nonEmpty then completed.result.stepOut else "<EMPTY>"
   val stdErrContent =
@@ -120,7 +120,7 @@ def defaultVerticalBody(completed : Step.Run.Completed) : String =
 //      | Environment:
 //      |${increaseIndent(5)(pprint.PPrinter.BlackWhite(completed.step.environment).plainText)}"""
 
-def defaultVerticalBody(skipped : Step.Run.Skipped) : String =
+def defaultVerticalBody[T](skipped : Step.Run.Skipped[T]) : String =
   s"""|
       | SKIPPED!""".stripMargin // don't trip, we want the linefeed and initial space
 

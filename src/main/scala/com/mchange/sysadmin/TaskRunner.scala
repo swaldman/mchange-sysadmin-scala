@@ -11,13 +11,13 @@ import scala.jdk.CollectionConverters.*
 
 object TaskRunner:
 
-  def default(from : String, to : String) : TaskRunner =
-    new TaskRunner with TaskRunner.SmtpLogging(from=from,to=to) with TaskRunner.ReportLogging()
+  def default[T](from : String, to : String) : TaskRunner[T] =
+    new TaskRunner[T] with TaskRunner.SmtpLogging[T](from=from,to=to) with TaskRunner.ReportLogging[T]()
 
-  lazy val stdoutOnly: TaskRunner = new TaskRunner.ReportLogging(){}
+  def stdoutOnly[T]: TaskRunner[T] = new TaskRunner.ReportLogging[T](){}
 
-  trait LineLogging( lines : Task.Run => Iterable[String], sink : String => Unit ) extends TaskRunner:
-    abstract override def sendReports( taskRun : Task.Run ) : Unit =
+  trait LineLogging[T]( lines : Task.Run[T] => Iterable[String], sink : String => Unit ) extends TaskRunner[T]:
+    abstract override def sendReports( taskRun : Task.Run[T] ) : Unit =
       super.sendReports( taskRun )
       try
         lines( taskRun ).foreach( sink )
@@ -25,8 +25,8 @@ object TaskRunner:
         case NonFatal(t) => t.printStackTrace
   end LineLogging
 
-  trait ReportLogging( report : Task.Run => String = defaultVerticalMessage, sink : String => Unit = (text : String) => println(text) ) extends TaskRunner:
-    abstract override def sendReports( taskRun : Task.Run ) : Unit =
+  trait ReportLogging[T]( report : Task.Run[T] => String = defaultVerticalMessage[T], sink : String => Unit = (text : String) => println(text) ) extends TaskRunner[T]:
+    abstract override def sendReports( taskRun : Task.Run[T] ) : Unit =
       super.sendReports( taskRun )
       try
         sink(report( taskRun ))
@@ -90,7 +90,7 @@ object TaskRunner:
       debug    : Boolean = false
     )
   // see https://stackoverflow.com/questions/1990454/using-javamail-to-connect-to-gmail-smtp-server-ignores-specified-port-and-tries
-  trait SmtpLogging( from : String, to : String, subject : Task.Run => String = defaultTitle, text : Task.Run => String = defaultVerticalMessage)(using context : SmtpLogging.Context) extends TaskRunner:
+  trait SmtpLogging[T]( from : String, to : String, subject : Task.Run[T] => String = defaultTitle[T], text : Task.Run[T] => String = defaultVerticalMessage[T])(using context : SmtpLogging.Context) extends TaskRunner[T]:
     val props =
       import SmtpLogging.Prop
       val tmp = new Properties()
@@ -106,7 +106,7 @@ object TaskRunner:
       tmp.setDebug(context.debug)
       tmp
 
-    abstract override def sendReports( taskRun : Task.Run ) : Unit =
+    abstract override def sendReports( taskRun : Task.Run[T] ) : Unit =
       super.sendReports( taskRun )
       try
         val msg = new MimeMessage(session)
@@ -124,22 +124,25 @@ object TaskRunner:
         case NonFatal(t) => t.printStackTrace
   end SmtpLogging
 
-trait TaskRunner:
-  def silentRun( task : Task ) : Task.Run =
-    val seqRunsReversed = task.sequential.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
+trait TaskRunner[T]:
+  def silentRun( task : Task[T] ) : Task.Run[T] =
+    val seqRunsReversed = task.sequential.foldLeft( Nil : List[Step.Run[T]] ): ( accum, next ) =>
       accum match
-        case Nil => Step.Run.Completed(None, next) :: accum
-        case (head : Step.Run.Completed) :: tail if head.success => Step.Run.Completed(Some(head), next) :: accum
-        case other => Step.Run.Skipped(next) :: accum
+        case Nil => Step.Run.Completed[T](None, next) :: accum
+        case (head : Step.Run.Completed[T]) :: tail if head.success => Step.Run.Completed(Some(head), next) :: accum
+        case other => Step.Run.Skipped[T](next) :: accum
 
-    val bestEffortReversed = task.bestAttemptCleanups.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
-      val lastCompleted = seqRunsReversed.collect { case completed : Step.Run.Completed => completed }.headOption
-      Step.Run.Completed(lastCompleted,next) :: accum
+    val bestEffortReversed = task.bestAttemptCleanups.foldLeft( Nil : List[Step.Run[T]] ): ( accum, next ) =>
+      val lastWithCarryForward =
+        seqRunsReversed
+          .collect { case withCarryForward @ Step.Run.Completed[T](_,Step.Result[T](_,_,_,Some(_))) => withCarryForward }
+          .headOption
+      Step.Run.Completed(lastWithCarryForward,next) :: accum
 
     Task.Run(task,seqRunsReversed.reverse,bestEffortReversed.reverse)
 
-  def sendReports( taskRun : Task.Run ) : Unit = ()
+  def sendReports( taskRun : Task.Run[T] ) : Unit = ()
 
-  def runAndReport( task : Task ) : Unit =
+  def runAndReport( task : Task[T] ) : Unit =
     val taskRun = this.silentRun( task )
     sendReports( taskRun )
