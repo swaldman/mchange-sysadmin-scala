@@ -147,10 +147,10 @@ object TaskRunner:
             |
             |""".stripMargin // don't trim, we want the initial space
       val stdOutStdErr =
-        s"""| stdout:
+        s"""| out:
             |${increaseIndent(5)(stdOutContent)}
             |
-            | stderr:
+            | err:
             |${increaseIndent(5)(stdErrContent)}
             |""".stripMargin // don't trim, we want the initial space
       val mbCarryForward = completed.result.carryForwardDescription.fold(""): cfd =>
