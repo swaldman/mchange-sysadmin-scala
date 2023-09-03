@@ -2,139 +2,85 @@ package com.mchange.sysadmin
 
 import scala.collection.*
 import scala.util.control.NonFatal
-import javax.mail.*
-import javax.mail.internet.*
-import javax.mail.{Authenticator, PasswordAuthentication, Session, Transport}
-import scala.util.Using
-import scala.jdk.CollectionConverters.*
 import com.mchange.codegenutil.*
+import java.util.Date
+import javax.mail.Message
+import javax.mail.internet.*
 
 object TaskRunner:
 
+  object AbstractTask:
+    trait Run:
+      def task : AbstractTask
+      def sequential : List[AbstractStep.Run]
+      def bestAttemptCleanUps : List[AbstractStep.Run]
+      def success : Boolean
 
-  //def default(from : String, to : String) : TaskRunner =
-  //  new TaskRunner with TaskRunner.SmtpLogging(from=from,to=to) with TaskRunner.ReportLogging()
+  trait AbstractTask:
+    def name                : String
+    def sequential          : List[AbstractStep]
+    def bestAttemptCleanups : List[AbstractStep]
 
-  // def stdoutOnly: TaskRunner = new TaskRunner.ReportLogging(){}
+  object AbstractStep:
+    trait Result:
+      def exitCode: Option[Int]
+      def stepOut : String
+      def stepErr : String
+      def carryForwardDescription : Option[String]
 
+    object Run:
+      trait Completed extends AbstractStep.Run:
+        def result : AbstractStep.Result
+      trait Skipped extends AbstractStep.Run
+    trait Run:
+      def step         : AbstractStep
+      def success      : Boolean
+  trait AbstractStep:
+    def name              : String
+    def environment       : Map[String,String]
+    def workingDirectory  : os.Path
+    def actionDescription : String
 
-    /*
-    trait LineLogging[T]( lines : Task[T]#Run => Iterable[String], sink : String => Unit ) extends Task[T]:
-      abstract override def sendReports( taskRun : Run ) : Unit =
-        super.sendReports( taskRun )
-        try
-          lines( taskRun ).foreach( sink )
-        catch
-          case NonFatal(t) => t.printStackTrace
-    end LineLogging
+  object Reporters:
+    def stdOutOnly(formatter : AbstractTask.Run => String = Reporting.defaultVerticalMessage) : List[AbstractTask.Run => Unit] = List(
+      ( run : AbstractTask.Run ) => Console.out.println(formatter(run))
+    )
+    def stdErrOnly(formatter : AbstractTask.Run => String = Reporting.defaultVerticalMessage) : List[AbstractTask.Run => Unit] = List(
+      ( run : AbstractTask.Run ) => Console.err.println(formatter(run))
+    )
+    def smtpOnly(
+      from : String,
+      to : String,
+      subject : AbstractTask.Run => String = Reporting.defaultTitle,
+      text : AbstractTask.Run => String = Reporting.defaultVerticalMessage
+    )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] = List(
+      ( run : AbstractTask.Run ) =>
+        val msg = new MimeMessage(context.session)
+        msg.setText(text(run))
+        msg.setSubject(subject(run))
+        msg.setFrom(new InternetAddress(from))
+        msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to))
+        msg.setSentDate(new Date())
+        msg.saveChanges()
+        context.sendMessage(msg)
+    )
+    def smtpAndStdOut(
+      from : String,
+      to : String,
+      subject : AbstractTask.Run => String = Reporting.defaultTitle,
+      text : AbstractTask.Run => String = Reporting.defaultVerticalMessage
+    )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] =
+      smtpOnly(from,to,subject,text) ++ stdOutOnly(text)
 
-    trait ReportLogging[T]( report : Task[T]#Run => String = Task.Reporting.defaultVerticalMessage[T], sink : String => Unit = (text : String) => println(text) ) extends Task[T]:
-      abstract override def sendReports( taskRun : Run ) : Unit =
-        super.sendReports( taskRun )
-        try
-          sink(report( taskRun ))
-        catch
-          case NonFatal(t) => t.printStackTrace
-    end ReportLogging
+    def default( from : String, to : String )( using context : Smtp.Context ) = smtpAndStdOut(from,to)
 
-    object SmtpLogging:
-      object Prop:
-        val Host = "mail.smtp.host"
-        val Port = "mail.smtp.port"
-        val Auth = "mail.smtp.auth"
-        val User = "mail.smtp.user"
-        val Password = "mail.smtp.password" // this is NOT a standard javax.mail property AFAIK
-        val StartTlsEnable = "mail.smtp.starttls.enable"
-        val Debug = "mail.smtp.debug"
-      object Port:
-        // see e.g. https://sendgrid.com/blog/whats-the-difference-between-ports-465-and-587/
-        val Vanilla     = 25
-        val ImplicitTls = 465
-        val StartTls    = 587
-      case class Auth( user : String, password : String ) extends Authenticator:
-        override def getPasswordAuthentication() : PasswordAuthentication = new PasswordAuthentication(user, password)
-      object Context:
-        given Context = apply(System.getProperties, sys.env)
-        def apply( properties : Properties, environment : Map[String,String]) : Context =
-          val propsMap = properties.asScala
-          val host = (propsMap.get(Prop.Host) orElse environment.get("SMTP_HOST")).map(_.trim).getOrElse( throw new SysadminException("No SMTP Host Configured") )
-          val mbUser = (propsMap.get(Prop.User) orElse environment.get("SMTP_USER")).map(_.trim)
-          val mbPassword = (propsMap.get(Prop.Password) orElse environment.get("SMTP_PASSWORD")).map(_.trim)
-          val auth =
-            val mbFlagConfigured = propsMap.get(Prop.Auth)
-            (mbFlagConfigured, mbUser, mbPassword) match
-              case (Some("true") , Some(user), Some(password)) => Some(Auth(user, password))
-              case (None         , Some(user), Some(password)) => Some(Auth(user, password))
-              case (Some("false"), Some(_),Some(_)) =>
-                System.err.println(s"WARNING: SMTP user and password are both configured, but property '${Prop.Auth}' is false, so authentication is disabled.")
-                None
-              case (Some("false"), _, _) => None
-              case (Some(bad), Some(user), Some(password)) =>
-                System.err.println(s"WARNING: Ignoring bad SMTP property '${Prop.Auth}' set to '${bad}'. User and password are set so authentication is enabled.")
-                Some(Auth(user, password))
-              case (None, Some(user), None) =>
-                System.err.println(s"WARNING: A user '${user}' is configured, but no password is set, so authentication is disabled.")
-                None
-              case (_, _, _) =>
-                None
-          val startTlsEnabled = (propsMap.get(Prop.StartTlsEnable) orElse environment.get("SMTP_START_TLS") orElse environment.get("SMTP_STARTTLS")).map(_.toBoolean).getOrElse(false)
+  end Reporters
 
-          // XXX: Can there be unauthenticated TLS? I'm presuming authentication suggests one for or another of TLS
-          val defaultPort = auth.fold(Port.Vanilla)(_ => if startTlsEnabled then Port.StartTls else Port.ImplicitTls)
-
-          val port = (propsMap.get(Prop.Port) orElse environment.get("SMTP_PORT")).map( _.toInt ).getOrElse( defaultPort )
-          val debug = (propsMap.get(Prop.Debug) orElse environment.get("SMTP_DEBUG")).map(_.toBoolean).getOrElse(false)
-          Context(host,port,auth,startTlsEnabled,debug)
-      case class Context(
-        host : String,
-        port : Int = 25,
-        auth : Option[Auth] = None,
-        startTls : Boolean = false,
-        debug    : Boolean = false
-      )
-    // see https://stackoverflow.com/questions/1990454/using-javamail-to-connect-to-gmail-smtp-server-ignores-specified-port-and-tries
-    trait SmtpLogging[T]( from : String, to : String, subject : Task[T]#Run => String = Task.Reporting.defaultTitle[T], text : Task[T]#Run => String = Task.Reporting.defaultVerticalMessage[T])(using context : SmtpLogging.Context) extends Task[T]:
-      val props =
-        import SmtpLogging.Prop
-        val tmp = new Properties()
-        tmp.setProperty(Prop.Host,           context.host)
-        tmp.setProperty(Prop.Port,           context.port.toString)
-        tmp.setProperty(Prop.Auth,           context.auth.nonEmpty.toString)
-        tmp.setProperty(Prop.StartTlsEnable, context.startTls.toString)
-        tmp.setProperty(Prop.Debug,          context.debug.toString)
-        tmp
-
-      val session =
-        val tmp = Session.getInstance(props, context.auth.getOrElse(null))
-        tmp.setDebug(context.debug)
-        tmp
-
-      abstract override def sendReports( taskRun : Run ) : Unit =
-        super.sendReports( taskRun )
-        try
-          val msg = new MimeMessage(session)
-          msg.setText(text(taskRun))
-          msg.setSubject(subject(taskRun))
-          msg.setFrom(new InternetAddress(from))
-          msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to))
-          msg.setSentDate(new Date())
-          msg.saveChanges()
-          context.auth.fold(Transport.send(msg)): auth =>
-            Using.resource(session.getTransport("smtps")): transport =>
-              transport.connect(context.host, context.port, auth.user, auth.password);
-              transport.sendMessage(msg, msg.getAllRecipients());
-        catch
-          case NonFatal(t) => t.printStackTrace
-    end SmtpLogging
-    */
-end TaskRunner
-
-trait TaskRunner[T]:
   object Reporting:
-    def defaultTitle( run : Task.Run ) =
+    def defaultTitle( run : AbstractTask.Run ) =
       hostname.fold("TASK")(hn => "[" + hn + "]") + ": " + run.task.name + " -- " + (if run.success then "SUCCEEDED" else "FAILED")
 
-    def defaultVerticalMessage( run : Task.Run ) =
+    def defaultVerticalMessage( run : AbstractTask.Run ) =
       val mainSection =
         s"""|=====================================================================
             | ${defaultTitle(run)}
@@ -160,29 +106,29 @@ trait TaskRunner[T]:
 
       mainSection + midsection + footer
 
-    def defaultVerticalMessageSequential( sequential : List[Step.Run] ) : String =
+    def defaultVerticalMessageSequential( sequential : List[AbstractStep.Run] ) : String =
       val tups = immutable.LazyList.from(1).zip(sequential)
       val untrimmed = tups.foldLeft(""): (accum, next) =>
         accum + (LineSep*2) + defaultVerticalMessage(next)
       untrimmed.trim
 
-    def defaultVerticalMessageBestAttemptCleanups( bestAttemptCleanups : List[Step.Run] ) : String =
+    def defaultVerticalMessageBestAttemptCleanups( bestAttemptCleanups : List[AbstractStep.Run] ) : String =
       val untrimmed = bestAttemptCleanups.foldLeft(""): (accum, next) =>
         accum + (LineSep*2) + defaultVerticalMessage(next)
       untrimmed.trim
 
-    def defaultVerticalMessage( run : Step.Run ) : String = defaultVerticalMessage(None, run)
+    def defaultVerticalMessage( run : AbstractStep.Run ) : String = defaultVerticalMessage(None, run)
 
-    def defaultVerticalMessage( tup : Tuple2[Int,Step.Run]) : String = defaultVerticalMessage(Some(tup(0)),tup(1))
+    def defaultVerticalMessage( tup : Tuple2[Int,AbstractStep.Run]) : String = defaultVerticalMessage(Some(tup(0)),tup(1))
 
-    def defaultVerticalMessage( index : Option[Int], run : Step.Run ) : String =
+    def defaultVerticalMessage( index : Option[Int], run : AbstractStep.Run ) : String =
 //      def action( step : Step ) : String =
 //        step match
 //          case exec : Step.Exec => s"Parsed command: ${exec.parsedCommand}"
 //          case arbitrary : Step.Arbitrary => "Action: <internal function>"
       val body = run match
-        case completed : Step.Run.Completed => defaultVerticalBody(completed)
-        case skipped   : Step.Run.Skipped   => defaultVerticalBody(skipped)
+        case completed : AbstractStep.Run.Completed => defaultVerticalBody(completed)
+        case skipped   : AbstractStep.Run.Skipped   => defaultVerticalBody(skipped)
       val header =
         s"""|---------------------------------------------------------------------
             | ${index.fold(run.step.name)(i => i.toString + ". " + run.step.name)}
@@ -191,7 +137,7 @@ trait TaskRunner[T]:
             | Succeeded? ${if run.success then "Yes" else "No"}""".stripMargin.trim
       header + LineSep + body
 
-    def defaultVerticalBody(completed : Step.Run.Completed) : String =
+    def defaultVerticalBody(completed : AbstractStep.Run.Completed) : String =
       val stdOutContent =
         if completed.result.stepOut.nonEmpty then completed.result.stepOut else "<EMPTY>"
       val stdErrContent =
@@ -222,12 +168,18 @@ trait TaskRunner[T]:
     //      | Environment:
     //      |${increaseIndent(5)(pprint.PPrinter.BlackWhite(completed.step.environment).plainText)}"""
 
-    def defaultVerticalBody(skipped : Step.Run.Skipped) : String =
+    def defaultVerticalBody(skipped : AbstractStep.Run.Skipped) : String =
       s"""|
           | SKIPPED!""".stripMargin // don't trip, we want the linefeed and initial space
 
   end Reporting
+end TaskRunner
 
+class TaskRunner[T]:
+  import TaskRunner.*
+
+  object Carrier:
+    val carryPrior : Carrier = (prior,_,_,_) => prior
   type Carrier = (T, Int, String, String) => T
 
   def arbitraryExec( prior : T, thisStep : Step.Arbitrary, command : os.Shellable, carryForward : Carrier ) : Step.Result =
@@ -245,20 +197,24 @@ trait TaskRunner[T]:
         case _ : Unit => None
         case other    => Some( other.toString )
       def emptyWithCarryForward( t : T ) : Result = Result(None,"","",t)
+      def zeroWithCarryForward( t : T ) : Result = Result(Some(0),"","",t)
     case class Result(
       exitCode: Option[Int],
       stepOut : String,
       stepErr : String,
       carryForward : T,
       carryForwardDescriber : T => Option[String] = defaultCarryForwardDescriber
-    ):
-      def carryForwardDescription = carryForwardDescriber(carryForward)
+    ) extends AbstractStep.Result:
+      def carryForwardDescription : Option[String]= carryForwardDescriber(carryForward)
     def exitCodeIsZero(run : Step.Run.Completed) : Boolean = run.result.exitCode.fold(false)( _ == 0 )
     def stepErrIsEmpty(run : Step.Run.Completed) : Boolean = run.result.stepErr.isEmpty
+    def defaultIsSuccess(run : Step.Run.Completed) : Boolean = run.result.exitCode match
+      case Some( exitCode ) => exitCode == 0
+      case None             => run.result.stepErr.isEmpty
     case class Arbitrary (
       name : String,
-      val action : (T, Step.Arbitrary) => Result,
-      val isSuccess : Step.Run.Completed => Boolean,
+      action : (T, Step.Arbitrary) => Result,
+      isSuccess : Step.Run.Completed => Boolean = defaultIsSuccess,
       workingDirectory : os.Path = os.pwd,
       environment : immutable.Map[String,String] = sys.env,
       actionDescription : String = "Action: <internal function>"
@@ -266,12 +222,11 @@ trait TaskRunner[T]:
       override def toString() = s"Step.Arbitrary(name=${name}, workingDirectory=${workingDirectory}, environment=********)"
     case class Exec (
       name : String,
+      parsedCommand : List[String],
       workingDirectory : os.Path = os.pwd,
       environment : immutable.Map[String,String] = sys.env,
-    )(
-      val parsedCommand : List[String],
-      val carrier : Carrier,
-      val isSuccess : Step.Run.Completed => Boolean = exitCodeIsZero,
+      carrier : Carrier = Carrier.carryPrior,
+      isSuccess : Step.Run.Completed => Boolean = defaultIsSuccess,
     ) extends Step:
       def actionDescription = s"Parsed command: ${parsedCommand}"
       override def toString() = s"Step.Exec(name=${name}, parsedCommand=${parsedCommand}, workingDirectory=${workingDirectory}, environment=********)"
@@ -289,20 +244,58 @@ trait TaskRunner[T]:
             catch
               case NonFatal(t) => Step.Result(None,"",t.fullStackTrace, prior)
           Step.Run.Completed.apply( step, result )
-      case class Completed( step : Step, result : Step.Result ) extends Step.Run:
+      case class Completed( step : Step, result : Step.Result ) extends Step.Run, AbstractStep.Run.Completed:
         def success : Boolean = step.isSuccess(this)
-      case class Skipped( step : Step ) extends Step.Run:
+      case class Skipped( step : Step ) extends Step.Run, AbstractStep.Run.Skipped:
         val success : Boolean = false
-    sealed trait Run:
+    sealed trait Run extends AbstractStep.Run:
       def step         : Step
       def success      : Boolean
-  sealed trait Step:
+  sealed trait Step extends TaskRunner.AbstractStep:
     def name              : String
     def environment       : Map[String,String]
     def workingDirectory  : os.Path
     def actionDescription : String
     def isSuccess : Step.Run.Completed => Boolean
   end Step
+
+  def arbitrary(
+    name : String,
+    action : (T, Step.Arbitrary) => Step.Result,
+    isSuccess : Step.Run.Completed => Boolean = Step.stepErrIsEmpty,
+    workingDirectory : os.Path = os.pwd,
+    environment : immutable.Map[String,String] = sys.env,
+    actionDescription : String = "Action: <internal function>"
+  ) : Step.Arbitrary =
+    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription)
+
+  def exec(
+    name : String,
+    parsedCommand : List[String],
+    workingDirectory : os.Path = os.pwd,
+    environment : immutable.Map[String,String] = sys.env,
+    carrier : Carrier = Carrier.carryPrior,
+    isSuccess : Step.Run.Completed => Boolean = Step.exitCodeIsZero,
+  ) : Step.Exec =
+    Step.Exec(name, parsedCommand, workingDirectory, environment, carrier, isSuccess)
+
+  def result(
+    exitCode: Option[Int],
+    stepOut : String,
+    stepErr : String,
+    carryForward : T,
+    carryForwardDescriber : T => Option[String] = Step.Result.defaultCarryForwardDescriber
+  ) = Step.Result(exitCode, stepOut, stepErr, carryForward, carryForwardDescriber)
+
+  type Arbitrary = this.Step.Arbitrary
+  type Exec      = this.Step.Exec
+
+  type Completed = this.Step.Run.Completed
+
+  val Result = this.Step.Result
+  type Result = this.Step.Result
+
+  val carryPrior = Carrier.carryPrior
 
   def silentRun(task : Task) : Task.Run =
     val seqRunsReversed = task.sequential.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
@@ -320,11 +313,13 @@ trait TaskRunner[T]:
 
     Task.Run(task, seqRunsReversed.reverse,bestEffortReversed.reverse)
 
-  def sendReports( taskRun : Task.Run ) : Unit = ()
-
-  def runAndReport(task : Task) : Unit =
+  def runAndReport(task : Task, reporters : List[Task.Run => Unit]) : Unit =
     val run = this.silentRun(task)
-    sendReports( run )
+    reporters.foreach: report =>
+      try
+        report(run)
+      catch
+        case NonFatal(t) => t.printStackTrace
 
   object Task:
     object Run:
@@ -334,9 +329,9 @@ trait TaskRunner[T]:
       sequential : List[Step.Run],
       bestAttemptCleanUps : List[Step.Run],
       isSuccess : Run => Boolean = Run.usualSuccessCriterion
-    ):
+    ) extends AbstractTask.Run:
       def success = isSuccess( this )
-  trait Task:
+  trait Task extends TaskRunner.AbstractTask:
     def name                : String
     def init                : T
     def sequential          : List[Step]
