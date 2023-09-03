@@ -4,9 +4,7 @@ ThisBuild / publishTo := {
 }
 
 ThisBuild / organization := "com.mchange"
-ThisBuild / version      := "0.0.4"
-
-val ZIOVersion = "2.0.5"
+ThisBuild / version      := "0.0.5-SNAPSHOT"
 
 lazy val root = project
   .in(file("."))
@@ -17,6 +15,7 @@ lazy val root = project
     resolvers                += Resolver.mavenLocal,
     libraryDependencies      += "com.mchange" %% "codegenutil" % "0.0.2",
     libraryDependencies      += "com.lihaoyi" %% "os-lib"      % "0.9.1",
+    libraryDependencies      += "com.lihaoyi" %% "pprint"      % "0.8.1",
     libraryDependencies      += "com.sun.mail" % "javax.mail"  % "1.6.2",
     libraryDependencies      += "com.sun.mail" % "smtp"        % "1.6.2",
     pomExtra                 := pomExtraForProjectName_Apache2( name.value ),

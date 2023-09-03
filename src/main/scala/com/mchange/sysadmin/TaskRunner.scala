@@ -155,7 +155,7 @@ object TaskRunner:
       val mbCarryForward = completed.result.carryForwardDescription.fold(""): cfd =>
         s"""|
             | carryforward:
-            |${increaseIndent(5)(cfd)}""".stripMargin
+            |${increaseIndent(5)(pprint(cfd).plainText)}""".stripMargin
       mbExitCode + stdOutStdErr + mbCarryForward
 
     // Leave this stuff out

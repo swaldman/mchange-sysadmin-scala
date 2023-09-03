@@ -9,6 +9,9 @@ import java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME
 import scala.util.control.NonFatal
 
 class SysadminException( message : String, cause : Throwable = null ) extends Exception(message, cause)
+class UnexpectedPriorState( message : String, cause : Throwable = null ) extends Exception(message, cause)
+
+def abortUnexpectedPriorState( message : String ) : Nothing = throw new UnexpectedPriorState(message)
 
 def extractFullStackTrace(t:Throwable) : String =
   val sw = new java.io.StringWriter()
