@@ -4,7 +4,7 @@ Some tools for doing sysadmin scripting in Scala
 
 ### Cautious tasks with reports
 
-The main utility here is ['TaskRunner'](src/main/scala/com/mchange/sysadmin/TaskRunner.scala).
+The main utility here is [`TaskRunner`](src/main/scala/com/mchange/sysadmin/TaskRunner.scala).
 
 The idea is you
 
@@ -19,7 +19,7 @@ The idea is you
 * Define a list of "best-attempt cleanups", each attempted exactly once
   regardless of whether the main sequence or other clean-up steps have succeeded
   or failed. The cleanup steps are given the carryforward produced by the last
-  successful task.
+  unskipped task.
 
 When you run a task, you supply a list "reporters", which generated and send
 reports about the run. SMTP, stdout, and stderr reporters are defined, though
@@ -28,8 +28,10 @@ of course you could define your own.
 For example, [here](https://github.com/swaldman/mchange-sysadmin-scripts/blob/main/taskbin/renew-certs)
 is a very simple task to renew letsencrypt certificates. The payload type is just `Unit`.
 
-Here is a more complicated example for backup up databases and uploading the
-results to an [rclone](https://rclone.org/) destination. The task is defined
+Here is a more complicated example that backs up a database and uploads the
+results to an [rclone](https://rclone.org/) destination.
+
+The task is defined
 within an abstract class, so it can be [trivially](https://github.com/swaldman/mchange-sysadmin-scripts/blob/main/taskbin/backup-postgres)
 [specialized](https://github.com/swaldman/mchange-sysadmin-scripts/blob/main/taskbin/backup-mysql) for
 multiple databases.
