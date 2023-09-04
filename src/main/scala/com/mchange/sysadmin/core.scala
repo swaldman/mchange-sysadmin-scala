@@ -31,6 +31,21 @@ def timestamp =
   val now = Instant.now.truncatedTo( ChronoUnit.SECONDS ).atZone(ZoneId.systemDefault())
   ISO_OFFSET_DATE_TIME.format(now)
 
+val UnitKiB = 1024L
+val UnitMiB = 1024L * 1024L
+val UnitGiB = 1024L * 1024L * 1024L
+val UnitTiB = 1024L * 1024L * 1024L * 1024L
 
+def formatSize(num : Double, unit : String) = f"$num%1.3f $unit%s"
+
+def friendlyFileSize( bytes : Long ) : String =
+  if (bytes < UnitKiB) then
+    s"${bytes} bytes"
+  else if (bytes < UnitMiB) then
+    formatSize(bytes.toDouble / UnitKiB, "KiB")
+  else if (bytes < UnitGiB) then
+    formatSize(bytes.toDouble / UnitMiB, "MiB")
+  else
+    formatSize(bytes.toDouble / UnitGiB, "TiB")
 
 

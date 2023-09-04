@@ -52,32 +52,35 @@ object TaskRunner:
     def smtpOnly(
       from : String,
       to : String,
-      subject : AbstractTask.Run => String = Reporting.defaultTitle,
-      text : AbstractTask.Run => String = Reporting.defaultVerticalMessage
+      compose : (String, String, AbstractTask.Run, Smtp.Context) => MimeMessage = Reporting.defaultCompose
     )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] = List(
       ( run : AbstractTask.Run ) =>
-        val msg = new MimeMessage(context.session)
-        msg.setText(text(run))
-        msg.setSubject(subject(run))
-        msg.setFrom(new InternetAddress(from))
-        msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to))
-        msg.setSentDate(new Date())
-        msg.saveChanges()
+        val msg = compose( from, to, run, context )
         context.sendMessage(msg)
     )
     def smtpAndStdOut(
       from : String,
       to : String,
-      subject : AbstractTask.Run => String = Reporting.defaultTitle,
+      compose : (String, String, AbstractTask.Run, Smtp.Context) => MimeMessage = Reporting.defaultCompose,
       text : AbstractTask.Run => String = Reporting.defaultVerticalMessage
     )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] =
-      smtpOnly(from,to,subject,text) ++ stdOutOnly(text)
+      smtpOnly(from,to,compose) ++ stdOutOnly(text)
 
     def default( from : String, to : String )( using context : Smtp.Context ) = smtpAndStdOut(from,to)
 
   end Reporters
 
   object Reporting:
+    def defaultCompose( from : String, to : String, run : AbstractTask.Run, context : Smtp.Context ) : MimeMessage =
+      val msg = new MimeMessage(context.session)
+      msg.setText(defaultVerticalMessage(run))
+      msg.setSubject(defaultTitle(run))
+      msg.setFrom(new InternetAddress(from))
+      msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to))
+      msg.setSentDate(new Date())
+      msg.saveChanges()
+      msg
+
     def defaultTitle( run : AbstractTask.Run ) =
       hostname.fold("TASK")(hn => "[" + hn + "]") + ": " + run.task.name + " -- " + (if run.success then "SUCCEEDED" else "FAILED")
 
@@ -145,10 +148,10 @@ object TaskRunner:
         if completed.result.stepErr.nonEmpty then completed.result.stepErr else "<EMPTY>"
       val mbExitCode = completed.result.exitCode.fold(""): code =>
         s"""| Exit code: ${code}
-            |
             |""".stripMargin // don't trim, we want the initial space
       val stdOutStdErr =
-        s"""| out:
+        s"""|
+            | out:
             |${increaseIndent(5)(stdOutContent)}
             |
             | err:
@@ -157,7 +160,8 @@ object TaskRunner:
       val mbNotes = completed.result.notes.fold(""): notes =>
         s"""|
             | notes:
-            |${increaseIndent(5)(notes)}""".stripMargin
+            |${increaseIndent(5)(notes)}
+            |""".stripMargin
       val mbCarryForward = completed.result.carryForwardDescription.fold(""): cfd =>
         s"""|
             | carryforward:
