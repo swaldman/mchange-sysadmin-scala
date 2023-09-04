@@ -4,7 +4,7 @@ ThisBuild / publishTo := {
 }
 
 ThisBuild / organization := "com.mchange"
-ThisBuild / version      := "0.0.5"
+ThisBuild / version      := "0.0.6-SNAPSHOT"
 
 lazy val root = project
   .in(file("."))
