@@ -27,6 +27,7 @@ object TaskRunner:
       def stepOut : String
       def stepErr : String
       def carryForwardDescription : Option[String]
+      def notes   : Option[String]
 
     object Run:
       trait Completed extends AbstractStep.Run:
@@ -153,11 +154,15 @@ object TaskRunner:
             | err:
             |${increaseIndent(5)(stdErrContent)}
             |""".stripMargin // don't trim, we want the initial space
+      val mbNotes = completed.result.notes.fold(""): notes =>
+        s"""|
+            | notes:
+            |${increaseIndent(5)(notes)}""".stripMargin
       val mbCarryForward = completed.result.carryForwardDescription.fold(""): cfd =>
         s"""|
             | carryforward:
-            |${increaseIndent(5)(pprint(cfd).plainText)}""".stripMargin
-      mbExitCode + stdOutStdErr + mbCarryForward
+            |${increaseIndent(5)(cfd)}""".stripMargin
+      mbExitCode + stdOutStdErr + mbNotes + mbCarryForward
 
     // Leave this stuff out
     // We end up mailing sensitive stuff from the environment
@@ -196,7 +201,7 @@ class TaskRunner[T]:
     object Result:
       val defaultCarryForwardDescriber : T => Option[String] =
         case _ : Unit => None
-        case other    => Some( other.toString )
+        case other    => Some( pprint(other).plainText )
       def emptyWithCarryForward( t : T ) : Result = Result(None,"","",t)
       def zeroWithCarryForward( t : T ) : Result = Result(Some(0),"","",t)
     case class Result(
@@ -204,6 +209,7 @@ class TaskRunner[T]:
       stepOut : String,
       stepErr : String,
       carryForward : T,
+      notes   : Option[String] = None,
       carryForwardDescriber : T => Option[String] = defaultCarryForwardDescriber
     ) extends AbstractStep.Result:
       def carryForwardDescription : Option[String]= carryForwardDescriber(carryForward)
@@ -285,8 +291,9 @@ class TaskRunner[T]:
     stepOut : String,
     stepErr : String,
     carryForward : T,
+    notes   : Option[String] = None,
     carryForwardDescriber : T => Option[String] = Step.Result.defaultCarryForwardDescriber
-  ) = Step.Result(exitCode, stepOut, stepErr, carryForward, carryForwardDescriber)
+  ) = Step.Result(exitCode, stepOut, stepErr, carryForward,notes, carryForwardDescriber)
 
   type Arbitrary = this.Step.Arbitrary
   type Exec      = this.Step.Exec
@@ -306,10 +313,7 @@ class TaskRunner[T]:
         case other => Step.Run.Skipped(next) :: accum
 
     val bestEffortReversed = task.bestAttemptCleanups.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
-      val lastCompleted =
-        seqRunsReversed
-          .collect { case completed : Step.Run.Completed => completed }
-          .headOption
+      val lastCompleted = seqRunsReversed.collectFirst { case completed : Step.Run.Completed => completed }
       Step.Run.Completed(lastCompleted.fold(task.init)(_.result.carryForward),next) :: accum
 
     Task.Run(task, seqRunsReversed.reverse,bestEffortReversed.reverse)
