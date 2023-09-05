@@ -40,7 +40,7 @@ object TaskRunner:
     def name              : String
     def environment       : Map[String,String]
     def workingDirectory  : os.Path
-    def actionDescription : String
+    def actionDescription : Option[String]
 
   object Reporters:
     def stdOutOnly(formatter : AbstractTask.Run => String = Reporting.defaultVerticalMessage) : List[AbstractTask.Run => Unit] = List(
@@ -137,15 +137,20 @@ object TaskRunner:
         s"""|---------------------------------------------------------------------
             | ${index.fold(run.step.name)(i => i.toString + ". " + run.step.name)}
             |---------------------------------------------------------------------
-            | ${run.step.actionDescription}
-            | Succeeded? ${if run.success then "Yes" else "No"}""".stripMargin.trim
-      header + LineSep + body
+            |""".stripMargin
+      val mbActionDescription = run.step.actionDescription.fold(""): ad =>
+        s"""| ${ad}
+            |""".stripMargin
+      val succeededSection =
+        s"""| Succeeded? ${if run.success then "Yes" else "No"}
+            |""".stripMargin
+      header + mbActionDescription + succeededSection + body
 
     def defaultVerticalBody(completed : AbstractStep.Run.Completed) : String =
       val stdOutContent =
-        if completed.result.stepOut.nonEmpty then completed.result.stepOut else "<EMPTY>"
+        if completed.result.stepOut.nonEmpty then completed.result.stepOut else "<empty>"
       val stdErrContent =
-        if completed.result.stepErr.nonEmpty then completed.result.stepErr else "<EMPTY>"
+        if completed.result.stepErr.nonEmpty then completed.result.stepErr else "<empty>"
       val mbExitCode = completed.result.exitCode.fold(""): code =>
         s"""| Exit code: ${code}
             |""".stripMargin // don't trim, we want the initial space
@@ -228,7 +233,7 @@ class TaskRunner[T]:
       isSuccess : Step.Run.Completed => Boolean = defaultIsSuccess,
       workingDirectory : os.Path = os.pwd,
       environment : immutable.Map[String,String] = sys.env,
-      actionDescription : String = "Action: <internal function>"
+      actionDescription : Option[String] = None
     ) extends Step:
       override def toString() = s"Step.Arbitrary(name=${name}, workingDirectory=${workingDirectory}, environment=********)"
     case class Exec (
@@ -239,7 +244,7 @@ class TaskRunner[T]:
       carrier : Carrier = Carrier.carryPrior,
       isSuccess : Step.Run.Completed => Boolean = defaultIsSuccess,
     ) extends Step:
-      def actionDescription = s"Parsed command: ${parsedCommand}"
+      def actionDescription = Some(s"Parsed command: ${parsedCommand}")
       override def toString() = s"Step.Exec(name=${name}, parsedCommand=${parsedCommand}, workingDirectory=${workingDirectory}, environment=********)"
     object Run:
       object Completed:
@@ -266,7 +271,7 @@ class TaskRunner[T]:
     def name              : String
     def environment       : Map[String,String]
     def workingDirectory  : os.Path
-    def actionDescription : String
+    def actionDescription : Option[String]
     def isSuccess : Step.Run.Completed => Boolean
   end Step
 
@@ -276,7 +281,7 @@ class TaskRunner[T]:
     isSuccess : Step.Run.Completed => Boolean = Step.stepErrIsEmpty,
     workingDirectory : os.Path = os.pwd,
     environment : immutable.Map[String,String] = sys.env,
-    actionDescription : String = "Action: <internal function>"
+    actionDescription : Option[String] = None
   ) : Step.Arbitrary =
     Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription)
 
