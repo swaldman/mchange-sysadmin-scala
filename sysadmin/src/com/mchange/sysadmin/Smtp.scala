@@ -1,9 +1,9 @@
 package com.mchange.sysadmin
 
 import java.util.Properties
-import javax.mail.*
-import javax.mail.internet.*
-import javax.mail.{Authenticator, PasswordAuthentication, Session, Transport}
+import jakarta.mail.*
+import jakarta.mail.internet.*
+import jakarta.mail.{Authenticator, PasswordAuthentication, Session, Transport}
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 

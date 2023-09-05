@@ -11,6 +11,9 @@ import $ivy.`com.mchange::untemplate-mill:0.1.0-SNAPSHOT`
 import untemplate.mill._
 
 object sysadmin extends UntemplateModule with PublishModule {
+
+  val JakartaMailVersion = "2.0.1"
+
   override def scalaVersion = "3.3.0"
 
   override def artifactName = "mchange-sysadmin-scala"
@@ -33,8 +36,8 @@ object sysadmin extends UntemplateModule with PublishModule {
       ivy"com.mchange::codegenutil:0.0.2",
       ivy"com.lihaoyi::os-lib:0.9.1",
       ivy"com.lihaoyi::pprint:0.8.1",
-      ivy"com.sun.mail:javax.mail:1.6.2",
-      ivy"com.sun.mail:smtp:1.6.2",
+      ivy"com.sun.mail:jakarta.mail:${JakartaMailVersion}",
+      ivy"com.sun.mail:smtp:${JakartaMailVersion}",
     )
   }
 

@@ -4,8 +4,8 @@ import scala.collection.*
 import scala.util.control.NonFatal
 import com.mchange.codegenutil.*
 import java.util.Date
-import javax.mail.Message
-import javax.mail.internet.*
+import jakarta.mail.Message
+import jakarta.mail.internet.*
 
 object TaskRunner:
 
