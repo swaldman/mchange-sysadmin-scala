@@ -1,6 +1,12 @@
 package com.mchange.sysadmin
 
-def colorClass( boolean : Boolean ) = if boolean then "success" else "failure"
+case class StepRunMaybeIndexed( run : TaskRunner.AbstractStep.Run, mbIndex : Option[Int])
+
+def colorClass( run : TaskRunner.AbstractStep.Run ) = run match
+  case completed : TaskRunner.AbstractStep.Run.Completed =>
+    if completed.success then "success" else "failure"
+  case skipped : TaskRunner.AbstractStep.Run.Skipped =>
+    "skipped"
 
 def mbLabeledText( mlt : Option[Tuple2[String,String]]) : String =
   mlt match

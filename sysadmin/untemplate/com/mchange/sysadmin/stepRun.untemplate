@@ -1,0 +1,12 @@
+val StepRunMaybeIndexed( stepRun, mbIndex ) = srmi
+
+(srmi : StepRunMaybeIndexed)[]~()>  # Header delimeter, text start!
+
+<div class="step <( colorClass(stepRun) )>">
+   <div class="step-title"><(mbIndex.fold("")(i => s"${i}. "))><( stepRun.step.name )></div>
+   <div class="step-after-title">
+     <( mbActionDescription( stepRun.step ) )>
+     <div class="step-field"><b>Succeeded?</b> <(yn(stepRun.success))></div>
+     <( stepRunBody( stepRun ) )>
+   </div>  
+ </div>

@@ -83,7 +83,7 @@ object TaskRunner:
       msg
 
     def defaultTitle( run : AbstractTask.Run ) =
-      hostname.fold("TASK")(hn => "[" + hn + "]") + ": " + run.task.name + " -- " + (if run.success then "SUCCEEDED" else "FAILED")
+      hostname.fold("TASK")(hn => "[" + hn + "]") + " " + run.task.name + ": " + (if run.success then "SUCCEEDED" else "FAILED")
 
     def defaultVerticalMessage( run : AbstractTask.Run ) =
       val mainSection =
