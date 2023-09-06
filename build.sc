@@ -7,7 +7,7 @@ import mill.scalalib.publish._
 // huge thanks to @lolgab on the Scala discord!
 // import $file.buildCompilationSettings
 
-import $ivy.`com.mchange::untemplate-mill:0.1.0-SNAPSHOT`
+import $ivy.`com.mchange::untemplate-mill:0.1.0`
 import untemplate.mill._
 
 object sysadmin extends UntemplateModule with PublishModule {
@@ -17,7 +17,7 @@ object sysadmin extends UntemplateModule with PublishModule {
   override def scalaVersion = "3.3.0"
 
   override def artifactName = "mchange-sysadmin-scala"
-  override def publishVersion = T{"0.0.6"}
+  override def publishVersion = T{"0.0.7"}
   override def pomSettings    = T{
     PomSettings(
       description = "A library of utilities for sysadmin scripts",
