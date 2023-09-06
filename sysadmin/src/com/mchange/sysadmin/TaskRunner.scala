@@ -3,8 +3,10 @@ package com.mchange.sysadmin
 import scala.collection.*
 import scala.util.control.NonFatal
 import com.mchange.codegenutil.*
+
 import java.util.Date
-import jakarta.mail.Message
+
+import jakarta.mail.*
 import jakarta.mail.internet.*
 
 object TaskRunner:
@@ -74,7 +76,17 @@ object TaskRunner:
     def defaultCompose( from : String, to : String, run : AbstractTask.Run, context : Smtp.Context ) : MimeMessage =
       val msg = new MimeMessage(context.session)
       //msg.setText(defaultVerticalMessage(run))
-      msg.setContent(task_result_html(run).text, "text/html")
+      val htmlAlternative =
+        val tmp = new MimeBodyPart()
+        tmp.setContent(task_result_html(run).text, "text/html")
+        tmp
+      val plainTextAlternative =
+        val tmp = new MimeBodyPart()
+        tmp.setContent(defaultVerticalMessage(run), "text/plain")
+        tmp
+      // last entry is highest priority!
+      val multipart = new MimeMultipart("alternative", plainTextAlternative, htmlAlternative)
+      msg.setContent(multipart)
       msg.setSubject(defaultTitle(run))
       msg.setFrom(new InternetAddress(from))
       msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to))
