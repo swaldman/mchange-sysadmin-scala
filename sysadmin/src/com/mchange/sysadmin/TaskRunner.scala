@@ -13,7 +13,7 @@ object TaskRunner:
     trait Run:
       def task : AbstractTask
       def sequential : List[AbstractStep.Run]
-      def bestAttemptCleanUps : List[AbstractStep.Run]
+      def bestEffortCleanups : List[AbstractStep.Run]
       def success : Boolean
 
   trait AbstractTask:
@@ -73,7 +73,8 @@ object TaskRunner:
   object Reporting:
     def defaultCompose( from : String, to : String, run : AbstractTask.Run, context : Smtp.Context ) : MimeMessage =
       val msg = new MimeMessage(context.session)
-      msg.setText(defaultVerticalMessage(run))
+      //msg.setText(defaultVerticalMessage(run))
+      msg.setContent(task_result_html(run).text, "text/html")
       msg.setSubject(defaultTitle(run))
       msg.setFrom(new InternetAddress(from))
       msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to))
@@ -90,7 +91,7 @@ object TaskRunner:
             | ${defaultTitle(run)}
             |=====================================================================
             | Timestamp: ${timestamp}
-            | Succeeded overall? ${if run.success then "Yes" else "No"}
+            | Succeeded overall? ${yn( run.success )}
             |
             | SEQUENTIAL:
             |${defaultVerticalMessageSequential(run.sequential)}""".stripMargin.trim + LineSep + LineSep
@@ -98,10 +99,10 @@ object TaskRunner:
       def cleanupsSectionIfNecessary =
         s"""|-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
             |
-            | BEST-ATTEMPT CLEANUPS:
-            |${defaultVerticalMessageBestAttemptCleanups(run.bestAttemptCleanUps)}""".stripMargin.trim
+            | BEST-EFFORT CLEANUPS:
+            |${defaultVerticalMessageBestAttemptCleanups(run.bestEffortCleanups)}""".stripMargin.trim
 
-      val midsection = if run.bestAttemptCleanUps.isEmpty then "" else (cleanupsSectionIfNecessary + LineSep + LineSep)
+      val midsection = if run.bestEffortCleanups.isEmpty then "" else (cleanupsSectionIfNecessary + LineSep + LineSep)
 
       val footer =
         s"""|
@@ -142,7 +143,7 @@ object TaskRunner:
         s"""| ${ad}
             |""".stripMargin
       val succeededSection =
-        s"""| Succeeded? ${if run.success then "Yes" else "No"}
+        s"""| Succeeded? ${yn( run.success )}
             |""".stripMargin
       header + mbActionDescription + succeededSection + body
 
@@ -341,7 +342,7 @@ class TaskRunner[T]:
     case class Run(
       task : Task,
       sequential : List[Step.Run],
-      bestAttemptCleanUps : List[Step.Run],
+      bestEffortCleanups : List[Step.Run],
       isSuccess : Run => Boolean = Run.usualSuccessCriterion
     ) extends AbstractTask.Run:
       def success = isSuccess( this )

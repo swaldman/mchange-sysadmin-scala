@@ -1,0 +1,8 @@
+(run : TaskRunner.AbstractStep.Run.Completed)[]~()>  # Header delimeter, text start!
+<()
+  run.result.exitCode.foreach { code =>
+()>
+<div class="step-field"><b>Exit Code:</b> <( code )></div>
+<()
+  }
+()>

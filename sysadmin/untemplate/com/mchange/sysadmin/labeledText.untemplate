@@ -1,0 +1,5 @@
+(tup : Tuple2[String,String])[]~()>  # Header delimeter, text start!
+<div class="labeled-text-outer">
+  <span class="label"><( tup(0) )>:</span>
+  <div class="labeled-text-inner"><( tup(1) )></div>
+</div>

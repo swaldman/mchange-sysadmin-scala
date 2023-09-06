@@ -1,0 +1,117 @@
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
+
+val now = ZonedDateTime.now()
+val timestamp = RFC_1123_DATE_TIME.format(now)
+
+val title = TaskRunner.Reporting.defaultTitle(run)
+
+
+(run : TaskRunner.AbstractTask.Run)[]~()>  # Header delimeter, text start!
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      * {
+          font-family: sans-serif;
+      }
+      body {
+          margin-top: 1.5rem;
+          margin-left: 3rem;
+          margin-right: 3rem;
+          background-color: white;
+      }
+      .step-title {
+          font-weight: bold;
+          padding-bottom: 0.25rem;
+          margin-bottom: 0.5rem;
+          border-bottom: 1px solid black;
+      }
+      .step {
+          /* border: 1px solid black; */
+          margin: 0.5rem;
+          padding: 0.5rem;
+      }
+      .step-after-title {
+          margin-left: 0.5rem;
+      }
+      .step-field b {
+          font-size: 90%;
+      }
+      h2 {
+          margin-bottom: 0.5rem;
+      }
+      .timestamp {
+          /* font-family: monospace; */
+          font-style: italic;
+      }
+      .success {
+        background-color: #aaddaa;
+      }
+      .failure {
+        background-color: #ffaaaa;
+      }
+      .labeled-text-outer, .labeled-no-text {
+          margin-top: 0.5rem;
+          font-weight: bold;
+          font-size: 90%;
+      }
+      .labeled-text-inner {
+          background-color: #eeeeee;
+          margin-top: 0.25rem;
+          margin-left: 1rem;
+          margin-right: 1rem;
+          padding: 0.2rem;
+          font-weight: normal;
+          font-size: 95%;
+      }
+      h1 {
+        color: <( if run.success then "black" else "red" )>;
+        <( if !run.success then "background-color: yellow;" else "" )>
+      }
+    </style>
+    <title><( title )></title>
+  </head>
+  <body>
+    <h1><( title )></h1>
+    <div class="top-field"><b>Succeeded overall?:</b> <( yn(run.success) )></div>
+    <div class="top-field"><b>Timestamp:</b> <span class="timestamp"><( timestamp )></span></div>
+    <h2>Sequential steps:</h2>
+    <div class="sequential">
+<()
+  val indexedSequentials = LazyList.from(1).zip(run.sequential)
+  indexedSequentials.foreach { case ( index, stepRun ) =>
+()>
+      <div class="step <( colorClass(stepRun.success) )>">
+        <div class="step-title"><(index)>. <( stepRun.step.name )></div>
+        <div class="step-after-title">
+          <( mbActionDescription( stepRun.step ) )>
+          <div class="step-field"><b>Succeeded?</b> <(yn(stepRun.success))></div>
+          <( stepRunBody( stepRun ) )>
+        </div>  
+      </div>
+<()
+  } // indexedSequentials.foreach
+()>
+    </div>
+    <h2>Best-effort cleanups:</h2>
+    <div class="best-effort-cleanups">
+<()
+  run.bestEffortCleanups.foreach { stepRun =>
+()>
+      <div class="step <( colorClass( stepRun.success ) )>">
+        <div class="step-title"><( stepRun.step.name )></div>
+        <div class="step-after-title">
+          <( mbActionDescription( stepRun.step ) )>
+          <div class="step-field"><b>Succeeded?</b> <(yn(stepRun.success))></div>
+          <( stepRunBody( stepRun ) )>
+        </div>  
+      </div>
+<()
+  }
+()>  
+    </div>  
+  </body>
+</html>
+

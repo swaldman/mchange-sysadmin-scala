@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      * {
+          font-family: sans-serif;
+      }
+      body {
+          margin-top: 1.5rem;
+          margin-left: 3rem;
+          margin-right: 3rem;
+          background-color: white;
+      }
+      .step-title {
+          font-weight: bold;
+          padding-bottom: 0.25rem;
+          margin-bottom: 0.5rem;
+          border-bottom: 1px solid black;
+      }
+      .step {
+          /* border: 1px solid black; */
+          margin: 0.5rem;
+          padding: 0.5rem;
+      }
+      .step-after-title {
+          margin-left: 0.5rem;
+      }
+      .step-field b {
+          font-size: 90%;
+      }
+      h2 {
+          margin-bottom: 0.5rem;
+      }
+      .timestamp {
+          /* font-family: monospace; */
+          font-style: italic;
+      }
+      .success {
+        background-color: #aaddaa;
+      }
+      .failure {
+        background-color: #ffaaaa;
+      }
+      .labeled-text-outer, .labeled-no-text {
+          margin-top: 0.5rem;
+          font-weight: bold;
+          font-size: 90%;
+      }
+      .labeled-text-inner {
+          background-color: #eeeeee;
+          margin-top: 0.25rem;
+          margin-left: 1rem;
+          margin-right: 1rem;
+	  padding: 0.2rem;
+	  font-weight: normal;
+	  font-size: 90%;
+      }
+      h1 {
+        color: red;
+      }
+    </style>
+    <title>[because.lan]: Renew certs -- FAILED</title>
+  </head>
+  <body>
+    <h1>[because.lan]: Renew certs -- FAILED</h1>
+    <div class="top-field"><b>Succeeded overall?:</b> No</div>
+    <div class="top-field"><b>Timestamp:</b> <span class="timestamp">Wed, 6 Sep 2023 00:54:09 -0400</span></div>
+    <h2>Sequential steps:</h2>
+    <div class="sequential">
+      <div class="step success">
+        <div class="step-title">1. Stop nginx</div>
+        <div class="step-after-title">
+          
+<div class="step-field"><b>Action:</b> Parsed command: List(systemctl, stop, nginx)</div>
+
+
+          <div class="step-field"><b>Succeeded?</b> Yes</div>
+          
+
+<div class="step-field"><b>Exit Code:</b> 0</div>
+
+
+<div class="labeled-text-outer">
+  <span class="label">out:</span>
+  <div class="labeled-text-inner">Running systemctl (not!)... Done!</div>
+</div>
+<div class="labeled-no-text"><span class="label">err:</span> N/A</div>
+
+
+
+        </div>  
+      </div>
+      <div class="step failure">
+        <div class="step-title">2. Renew certs</div>
+        <div class="step-after-title">
+          
+<div class="step-field"><b>Action:</b> Parsed command: List(certbot, renew, --standalone, --no-random-sleep-on-renew)</div>
+
+
+          <div class="step-field"><b>Succeeded?</b> No</div>
+          
+
+<div class="step-field"><b>Exit Code:</b> 0</div>
+
+
+<div class="labeled-text-outer">
+  <span class="label">out:</span>
+  <div class="labeled-text-inner">Running certbot (not!)... Done!</div>
+</div>
+<div class="labeled-no-text"><span class="label">err:</span> N/A</div>
+
+
+
+        </div>  
+      </div>
+    </div>
+    <h2>Best-effort cleanups:</h2>
+    <div class="best-effort-cleanups">
+      <div class="step failure">
+        <div class="step-title">Restart nginx</div>
+        <div class="step-after-title">
+          
+<div class="step-field"><b>Action:</b> Parsed command: List(systemctl, restart, nginx)</div>
+
+
+          <div class="step-field"><b>Succeeded?</b> Yes</div>
+          
+
+<div class="step-field"><b>Exit Code:</b> 0</div>
+
+
+<div class="labeled-text-outer">
+  <span class="label">out:</span>
+  <div class="labeled-text-inner">Running systemctl (not!)... Done!</div>
+</div>
+<div class="labeled-no-text"><span class="label">err:</span> N/A</div>
+
+
+
+        </div>  
+      </div>
+    </div>  
+  </body>
+</html>
+
