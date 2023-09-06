@@ -67,8 +67,10 @@ val title = TaskRunner.Reporting.defaultTitle(run)
           margin-left: 1rem;
           margin-right: 1rem;
           padding: 0.2rem;
+          font-family: monospace;
           font-weight: normal;
           font-size: 95%;
+          font-family: monospace;
       }
       h1 {
         color: <( if run.success then "black" else "red" )>;
