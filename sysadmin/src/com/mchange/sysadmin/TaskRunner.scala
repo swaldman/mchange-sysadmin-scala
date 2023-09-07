@@ -52,8 +52,8 @@ object TaskRunner:
       ( run : AbstractTask.Run ) => Console.err.println(formatter(run))
     )
     def smtpOnly(
-      from : String,
-      to : String,
+      from : String = Env.Required.mailFrom,
+      to : String = Env.Required.mailTo,
       compose : (String, String, AbstractTask.Run, Smtp.Context) => MimeMessage = Reporting.defaultCompose
     )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] = List(
       ( run : AbstractTask.Run ) =>
@@ -61,14 +61,17 @@ object TaskRunner:
         context.sendMessage(msg)
     )
     def smtpAndStdOut(
-      from : String,
-      to : String,
+      from : String = Env.Required.mailFrom,
+      to : String = Env.Required.mailTo,
       compose : (String, String, AbstractTask.Run, Smtp.Context) => MimeMessage = Reporting.defaultCompose,
       text : AbstractTask.Run => String = Reporting.defaultVerticalMessage
     )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] =
       smtpOnly(from,to,compose) ++ stdOutOnly(text)
 
-    def default( from : String, to : String )( using context : Smtp.Context ) = smtpAndStdOut(from,to)
+    def default(
+      from : String = Env.Required.mailFrom,
+      to : String = Env.Required.mailTo
+    )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] = smtpAndStdOut(from,to)
 
   end Reporters
 
@@ -95,7 +98,7 @@ object TaskRunner:
       msg
 
     def defaultTitle( run : AbstractTask.Run ) =
-      hostname.fold("TASK")(hn => "[" + hn + "]") + " " + run.task.name + ": " + (if run.success then "SUCCEEDED" else "FAILED")
+      hostname.fold("TASK")(hn => "[" + hn + "]") + " " + (if run.success then "SUCCEEDED" else "FAILED") + ": " + run.task.name
 
     def defaultVerticalMessage( run : AbstractTask.Run ) =
       val mainSection =

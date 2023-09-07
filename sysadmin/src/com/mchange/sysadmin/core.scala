@@ -9,7 +9,8 @@ import java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME
 import scala.util.control.NonFatal
 
 class SysadminException( message : String, cause : Throwable = null ) extends Exception(message, cause)
-class UnexpectedPriorState( message : String, cause : Throwable = null ) extends Exception(message, cause)
+class UnexpectedPriorState( message : String, cause : Throwable = null ) extends SysadminException(message, cause)
+class MissingEnvironmentVariable( envVar : String ) extends SysadminException(s"Environment variable '${envVar}' is required, but missing.")
 
 def abortUnexpectedPriorState( message : String ) : Nothing = throw new UnexpectedPriorState(message)
 
@@ -50,17 +51,4 @@ def friendlyFileSize( bytes : Long ) : String =
 
 def yn( boolean : Boolean ) = if (boolean) then "Yes" else "No"
 
-/*
-def colorClass( boolean : Boolean ) = if boolean then "success" else "failure"
-
-def mbLabeledText( mlt : Option[Tuple2[String,String]]) : String =
-  mlt match
-    case Some( tup ) => labeledText( tup ).text
-    case None        => ""
-
-def labeledTextOrNA( label : String, mbText : String ) : String =
-  if mbText.nonEmpty then
-    labeledText( Tuple2(label,mbText) ).text
-  else
-    s"""<div class="labeled-no-text"><span class="label">${label}:</span> N/A</div>"""
-*/
+    

@@ -8,6 +8,12 @@ import scala.util.Using
 import scala.jdk.CollectionConverters.*
 
 object Smtp:
+  object Env:
+    val Host = "SMTP_HOST"
+    val Port = "SMTP_PORT"
+    val User = "SMTP_USER"
+    val Password = "SMTP_PASSWORD"
+    val Debug = "SMTP_DEBUG"
   object Prop:
     val Host = "mail.smtp.host"
     val Port = "mail.smtp.port"
@@ -27,9 +33,9 @@ object Smtp:
     given Context = apply(System.getProperties, sys.env)
     def apply( properties : Properties, environment : Map[String,String]) : Context =
       val propsMap = properties.asScala
-      val host = (propsMap.get(Prop.Host) orElse environment.get("SMTP_HOST")).map(_.trim).getOrElse( throw new SysadminException("No SMTP Host Configured") )
-      val mbUser = (propsMap.get(Prop.User) orElse environment.get("SMTP_USER")).map(_.trim)
-      val mbPassword = (propsMap.get(Prop.Password) orElse environment.get("SMTP_PASSWORD")).map(_.trim)
+      val host = (propsMap.get(Prop.Host) orElse environment.get(Env.Host)).map(_.trim).getOrElse( throw new SysadminException("No SMTP Host Configured") )
+      val mbUser = (propsMap.get(Prop.User) orElse environment.get(Env.User)).map(_.trim)
+      val mbPassword = (propsMap.get(Prop.Password) orElse environment.get(Env.Password)).map(_.trim)
       val auth =
         val mbFlagConfigured = propsMap.get(Prop.Auth)
         (mbFlagConfigured, mbUser, mbPassword) match
@@ -52,8 +58,8 @@ object Smtp:
       // XXX: Can there be unauthenticated TLS? I'm presuming authentication suggests one for or another of TLS
       val defaultPort = auth.fold(Port.Vanilla)(_ => if startTlsEnabled then Port.StartTls else Port.ImplicitTls)
 
-      val port = (propsMap.get(Prop.Port) orElse environment.get("SMTP_PORT")).map( _.toInt ).getOrElse( defaultPort )
-      val debug = (propsMap.get(Prop.Debug) orElse environment.get("SMTP_DEBUG")).map(_.toBoolean).getOrElse(false)
+      val port = (propsMap.get(Prop.Port) orElse environment.get(Env.Port)).map( _.toInt ).getOrElse( defaultPort )
+      val debug = (propsMap.get(Prop.Debug) orElse environment.get(Env.Debug)).map(_.toBoolean).getOrElse(false)
       Context(host,port,auth,startTlsEnabled,debug)
     end apply
   end Context
