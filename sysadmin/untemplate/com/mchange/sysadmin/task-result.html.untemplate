@@ -53,8 +53,13 @@ val title = TaskRunner.Reporting.defaultTitle(run)
       .failure {
         background-color: #ffaaaa;
       }
-      .skip {
+      .skipped {
         background-color: #ffff66;
+      }
+      .say-skipped {
+	    margin-top: 0.5rem;
+	    color: red;
+	    font-weight: bold;
       }
       .labeled-text-outer, .labeled-no-text {
           margin-top: 0.5rem;

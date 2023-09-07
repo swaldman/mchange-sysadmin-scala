@@ -1,1 +1,2 @@
-* Use `actionDescription` more in existing examples.
+* safe withNotes(....) (Exception building notes \n e.toString)
+* examine plaintext output

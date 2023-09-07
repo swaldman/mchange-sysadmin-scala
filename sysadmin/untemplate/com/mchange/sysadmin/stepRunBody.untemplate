@@ -11,6 +11,6 @@
 <()
     case skipped : TaskRunner.AbstractStep.Run.Skipped =>
 ()>
-<div class="skipped>SKIPPED</div>
+<div class="say-skipped">SKIPPED</div>
 <()
   }

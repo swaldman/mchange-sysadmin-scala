@@ -42,8 +42,13 @@
       .failure {
         background-color: #ffaaaa;
       }
-      .skip {
+      .skipped {
         background-color: #ffff66;
+      }
+      .say-skipped {
+	  margin-top: 0.5rem;
+	  color: red;
+	  font-weight: bold;
       }
       .labeled-text-outer, .labeled-no-text {
           margin-top: 0.5rem;
@@ -56,9 +61,12 @@
           margin-left: 1rem;
           margin-right: 1rem;
           padding: 0.2rem;
+          font-family: monospace;
           font-weight: normal;
           font-size: 95%;
           font-family: monospace;
+          white-space: pre;
+          overflow-x: auto;
       }
       h1 {
         color: red;
@@ -78,20 +86,20 @@
         }
       }
     </style>
-    <title>[because.lan] Renew certs: FAILED</title>
+    <title>[tickle5] FAILED: Backup Postgres, all databases</title>
   </head>
   <body>
-    <h1>[because.lan] Renew certs: FAILED</h1>
+    <h1>[tickle5] FAILED: Backup Postgres, all databases</h1>
     <div class="top-field"><b>Succeeded overall?:</b> No</div>
-    <div class="top-field"><b>Timestamp:</b> <span class="timestamp">Wed, 6 Sep 2023 11:44:33 -0400</span></div>
+    <div class="top-field"><b>Timestamp:</b> <span class="timestamp">Thu, 7 Sep 2023 20:07:23 GMT</span></div>
     <h2>Sequential steps:</h2>
     <div class="sequential">
        
 <div class="step success">
-   <div class="step-title">1. Stop nginx</div>
+   <div class="step-title">1. Ensure availability of rclone, if necessary</div>
    <div class="step-after-title">
      
-<div class="step-field"><b>Action:</b> Parsed command: List(systemctl, stop, nginx)</div>
+<div class="step-field"><b>Action:</b> rclone --version</div>
 
 
      <div class="step-field"><b>Succeeded?</b> Yes</div>
@@ -102,10 +110,50 @@
 
 <div class="labeled-text-outer">
   <span class="label">out:</span>
-  <div class="labeled-text-inner">Running systemctl (not!)... Done!</div>
+  <div class="labeled-text-inner">rclone v1.57.0-DEV
+- os/version: centos 8 (64 bit)
+- os/kernel: 4.18.0-512.el8.x86_64 (x86_64)
+- os/type: linux
+- os/arch: amd64
+- go/version: go1.16.12
+- go/linking: dynamic
+- go/tags: none</div>
 </div>
 <div class="labeled-no-text"><span class="label">err:</span> N/A</div>
+<div class="labeled-text-outer">
+  <span class="label">notes:</span>
+  <div class="labeled-text-inner">destpath: onedrive:cloud-backups/postgres</div>
+</div>
 
+<div class="labeled-text-outer">
+  <span class="label">carryforward:</span>
+  <div class="labeled-text-inner">Pad(tmpDir = None, backupFile = None)</div>
+</div>
+
+
+   </div>  
+ </div>
+
+       
+<div class="step success">
+   <div class="step-title">2. Create Temp Dir</div>
+   <div class="step-after-title">
+     
+<div class="step-field"><b>Action:</b> os.temp.dir()</div>
+
+
+     <div class="step-field"><b>Succeeded?</b> Yes</div>
+     
+
+
+
+<div class="labeled-no-text"><span class="label">out:</span> N/A</div>
+<div class="labeled-no-text"><span class="label">err:</span> N/A</div>
+
+<div class="labeled-text-outer">
+  <span class="label">carryforward:</span>
+  <div class="labeled-text-inner">Pad(tmpDir = Some(value = /tmp/18192888347317302068), backupFile = None)</div>
+</div>
 
 
    </div>  
@@ -113,25 +161,53 @@
 
        
 <div class="step failure">
-   <div class="step-title">2. Renew certs</div>
+   <div class="step-title">3. Perform Postgres Backup</div>
    <div class="step-after-title">
      
-<div class="step-field"><b>Action:</b> Parsed command: List(certbot, renew, --standalone, --no-random-sleep-on-renew)</div>
+<div class="step-field"><b>Action:</b> postgres-dump-all-to-file &lt;temporary-backup-file&gt;</div>
 
 
      <div class="step-field"><b>Succeeded?</b> No</div>
      
 
-<div class="step-field"><b>Exit Code:</b> 0</div>
+<div class="step-field"><b>Exit Code:</b> 1</div>
 
+
+<div class="labeled-no-text"><span class="label">out:</span> N/A</div>
+<div class="labeled-text-outer">
+  <span class="label">err:</span>
+  <div class="labeled-text-inner">pg_dumpall: could not connect to database &quot;template1&quot;: could not connect to server: No such file or directory
+	Is the server running locally and accepting
+	connections on Unix domain socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot;?</div>
+</div>
+<div class="labeled-text-outer">
+  <span class="label">notes:</span>
+  <div class="labeled-text-inner">Backup size: 0 bytes</div>
+</div>
 
 <div class="labeled-text-outer">
-  <span class="label">out:</span>
-  <div class="labeled-text-inner">Running certbot (not!)... Done!</div>
+  <span class="label">carryforward:</span>
+  <div class="labeled-text-inner">Pad(
+  tmpDir = Some(value = /tmp/18192888347317302068),
+  backupFile = Some(value = /tmp/18192888347317302068/tickle5-pgdumpall-2023-09-07)
+)</div>
 </div>
-<div class="labeled-no-text"><span class="label">err:</span> N/A</div>
 
 
+   </div>  
+ </div>
+
+       
+<div class="step skipped">
+   <div class="step-title">4. Copy backup to storage</div>
+   <div class="step-after-title">
+     
+<div class="step-field"><b>Action:</b> 'rclone mkdir' then 'rclone copy' or else 'mkdir' then 'cp'</div>
+
+
+     <div class="step-field"><b>Succeeded?</b> No</div>
+     
+<div class="say-skipped">SKIPPED</div>
 
    </div>  
  </div>
@@ -141,24 +217,27 @@
     <div class="best-effort-cleanups">
        
 <div class="step success">
-   <div class="step-title">Restart nginx</div>
+   <div class="step-title">Remove temporary local backup.</div>
    <div class="step-after-title">
      
-<div class="step-field"><b>Action:</b> Parsed command: List(systemctl, restart, nginx)</div>
+<div class="step-field"><b>Action:</b> os.remove( &lt;backup-file&gt; )</div>
 
 
      <div class="step-field"><b>Succeeded?</b> Yes</div>
      
 
-<div class="step-field"><b>Exit Code:</b> 0</div>
 
 
-<div class="labeled-text-outer">
-  <span class="label">out:</span>
-  <div class="labeled-text-inner">Running systemctl (not!)... Done!</div>
-</div>
+<div class="labeled-no-text"><span class="label">out:</span> N/A</div>
 <div class="labeled-no-text"><span class="label">err:</span> N/A</div>
 
+<div class="labeled-text-outer">
+  <span class="label">carryforward:</span>
+  <div class="labeled-text-inner">Pad(
+  tmpDir = Some(value = /tmp/18192888347317302068),
+  backupFile = Some(value = /tmp/18192888347317302068/tickle5-pgdumpall-2023-09-07)
+)</div>
+</div>
 
 
    </div>  
@@ -167,5 +246,4 @@
     </div>  
   </body>
 </html>
-
 
