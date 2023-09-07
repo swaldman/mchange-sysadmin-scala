@@ -4,10 +4,10 @@
     case completed : TaskRunner.AbstractStep.Run.Completed =>
 ()>
 <( mbExitCode( completed ) )>
-<( labeledTextOrNA("out", completed.result.stepOut).trim )>
-<( labeledTextOrNA("err", completed.result.stepErr).trim )>
-<( mbLabeledText( completed.result.notes.map( n => ("notes", n) ) ) )>
-<( mbLabeledText( completed.result.carryForwardDescription.map( cfd => ("carryforward", cfd) ) ) )>
+<( labeledTextOrNA("out".htmlSafeText, completed.result.stepOut.htmlSafeText).trim )>
+<( labeledTextOrNA("err".htmlSafeText, completed.result.stepErr.htmlSafeText).trim )>
+<( mbLabeledText( completed.result.notes.map( n => ("notes".htmlSafeText, n.htmlSafeText) ) ) )>
+<( mbLabeledText( completed.result.carryForwardDescription.map( cfd => ("carryforward".htmlSafeText, cfd.htmlSafeText) ) ) )>
 <()
     case skipped : TaskRunner.AbstractStep.Run.Skipped =>
 ()>

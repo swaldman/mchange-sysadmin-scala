@@ -17,7 +17,7 @@ object sysadmin extends UntemplateModule with PublishModule {
   override def scalaVersion = "3.3.0"
 
   override def artifactName = "mchange-sysadmin-scala"
-  override def publishVersion = T{"0.0.7"}
+  override def publishVersion = T{"0.0.8-SNAPSHOT"}
   override def pomSettings    = T{
     PomSettings(
       description = "A library of utilities for sysadmin scripts",
@@ -36,6 +36,7 @@ object sysadmin extends UntemplateModule with PublishModule {
       ivy"com.mchange::codegenutil:0.0.2",
       ivy"com.lihaoyi::os-lib:0.9.1",
       ivy"com.lihaoyi::pprint:0.8.1",
+      ivy"org.apache.commons:commons-text:1.10.0",
       ivy"com.sun.mail:jakarta.mail:${JakartaMailVersion}",
       ivy"com.sun.mail:smtp:${JakartaMailVersion}",
     )

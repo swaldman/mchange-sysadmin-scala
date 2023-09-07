@@ -2,7 +2,7 @@
 <()
   step.actionDescription.foreach { ad =>
 ()>
-<div class="step-field"><b>Action:</b> <( ad )></div>
+<div class="step-field"><b>Action:</b> <( ad.htmlSafeText )></div>
 <()
   } 
 ()>

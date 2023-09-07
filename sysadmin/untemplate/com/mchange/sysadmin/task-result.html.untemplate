@@ -71,6 +71,8 @@ val title = TaskRunner.Reporting.defaultTitle(run)
           font-weight: normal;
           font-size: 95%;
           font-family: monospace;
+          white-space: pre;
+          overflow-x: auto;
       }
       h1 {
         color: <( if run.success then "black" else "red" )>;
@@ -95,7 +97,7 @@ val title = TaskRunner.Reporting.defaultTitle(run)
   <body>
     <h1><( title )></h1>
     <div class="top-field"><b>Succeeded overall?:</b> <( yn(run.success) )></div>
-    <div class="top-field"><b>Timestamp:</b> <span class="timestamp"><( timestamp )></span></div>
+    <div class="top-field"><b>Timestamp:</b> <span class="timestamp"><( timestamp.htmlSafeText )></span></div>
     <h2>Sequential steps:</h2>
     <div class="sequential">
 <()

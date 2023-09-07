@@ -8,12 +8,12 @@ def colorClass( run : TaskRunner.AbstractStep.Run ) = run match
   case skipped : TaskRunner.AbstractStep.Run.Skipped =>
     "skipped"
 
-def mbLabeledText( mlt : Option[Tuple2[String,String]]) : String =
+def mbLabeledText( mlt : Option[Tuple2[HtmlSafeText,HtmlSafeText]]) : String =
   mlt match
     case Some( tup ) => labeledText( tup ).text
     case None        => ""
 
-def labeledTextOrNA( label : String, mbText : String ) : String =
+def labeledTextOrNA( label : HtmlSafeText, mbText : HtmlSafeText ) : String =
   if mbText.nonEmpty then
     labeledText( Tuple2(label,mbText) ).text
   else
