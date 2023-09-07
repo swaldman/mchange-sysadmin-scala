@@ -17,7 +17,7 @@ object sysadmin extends UntemplateModule with PublishModule {
   override def scalaVersion = "3.3.0"
 
   override def artifactName = "mchange-sysadmin-scala"
-  override def publishVersion = T{"0.0.8"}
+  override def publishVersion = T{"0.0.9-SNAPSHOT"}
   override def pomSettings    = T{
     PomSettings(
       description = "A library of utilities for sysadmin scripts",
@@ -26,7 +26,7 @@ object sysadmin extends UntemplateModule with PublishModule {
       licenses = Seq(License.`Apache-2.0`),
       versionControl = VersionControl.github("swaldman", "mchange-sysadmin-scala"),
       developers = Seq(
-	Developer("swaldman", "Steve Waldman", "https://github.com/swaldman")
+	      Developer("swaldman", "Steve Waldman", "https://github.com/swaldman")
       )
     )
   }
