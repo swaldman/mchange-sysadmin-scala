@@ -22,6 +22,12 @@ val title = TaskRunner.Reporting.defaultTitle(run)
           margin-right: 3rem;
           background-color: white;
       }
+      .empty-list {
+              font-style: italic;
+              margin-top: 0.5rem;
+              margin-left: 1rem;
+              margin-bottom: 1rem;
+      }
       .step-title {
           font-weight: bold;
           padding-bottom: 0.25rem;
@@ -57,9 +63,9 @@ val title = TaskRunner.Reporting.defaultTitle(run)
         background-color: #ffff66;
       }
       .say-skipped {
-	    margin-top: 0.5rem;
-	    color: red;
-	    font-weight: bold;
+            margin-top: 0.5rem;
+            color: red;
+            font-weight: bold;
       }
       .labeled-text-outer, .labeled-no-text {
           margin-top: 0.5rem;
@@ -106,24 +112,34 @@ val title = TaskRunner.Reporting.defaultTitle(run)
     <h2>Sequential steps:</h2>
     <div class="sequential">
 <()
-  val indexedSequentials = LazyList.from(1).zip(run.sequential).map( (i,r) => StepRunMaybeIndexed(r, Some(i)) )
-  indexedSequentials.foreach { case srmi =>
+  if (run.sequential.isEmpty) {
+    writer.write("""<div class="empty-list">This task includes no sequential steps.</div>""")
+  }
+  else {
+    val indexedSequentials = LazyList.from(1).zip(run.sequential).map( (i,r) => StepRunMaybeIndexed(r, Some(i)) )
+    indexedSequentials.foreach { case srmi =>
 ()>
        <( stepRun( srmi ) )>
 <()
-  } // indexedSequentials.foreach
+    } // indexedSequentials.foreach
+  } // else
 ()>
-    </div>
+    </div> <!-- sequential -->
     <h2>Best-effort cleanups:</h2>
     <div class="best-effort-cleanups">
 <()
-  run.bestEffortCleanups.map(sr => StepRunMaybeIndexed(sr, None) ).foreach { srmi =>
+  if (run.bestEffortCleanups.isEmpty) {
+    writer.write("""<div class="empty-list">This task includes no best-effort-cleanup steps.</div>""")
+  }
+  else {
+    run.bestEffortCleanups.map(sr => StepRunMaybeIndexed(sr, None) ).foreach { srmi =>
 ()>
        <( stepRun( srmi ) )>
 <()
-  }
+    } // run.bestEffortCleanups.foreach
+  } // else
 ()>  
-    </div>  
+    </div> <!-- best-effort-cleanup -->
   </body>
 </html>
 

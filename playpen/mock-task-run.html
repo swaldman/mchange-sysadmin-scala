@@ -11,6 +11,12 @@
           margin-right: 3rem;
           background-color: white;
       }
+      .empty-list {
+	  font-style: italic;
+	  margin-top: 0.5rem;
+	  margin-left: 1rem;
+	  margin-bottom: 1rem;
+      }
       .step-title {
           font-weight: bold;
           padding-bottom: 0.25rem;
@@ -215,34 +221,7 @@
     </div>
     <h2>Best-effort cleanups:</h2>
     <div class="best-effort-cleanups">
-       
-<div class="step success">
-   <div class="step-title">Remove temporary local backup.</div>
-   <div class="step-after-title">
-     
-<div class="step-field"><b>Action:</b> os.remove( &lt;backup-file&gt; )</div>
-
-
-     <div class="step-field"><b>Succeeded?</b> Yes</div>
-     
-
-
-
-<div class="labeled-no-text"><span class="label">out:</span> N/A</div>
-<div class="labeled-no-text"><span class="label">err:</span> N/A</div>
-
-<div class="labeled-text-outer">
-  <span class="label">carryforward:</span>
-  <div class="labeled-text-inner">Pad(
-  tmpDir = Some(value = /tmp/18192888347317302068),
-  backupFile = Some(value = /tmp/18192888347317302068/tickle5-pgdumpall-2023-09-07)
-)</div>
-</div>
-
-
-   </div>  
- </div>
-
+       <div class="empty-list">This task includes no best-effort-cleanup steps.</div>
     </div>  
   </body>
 </html>
