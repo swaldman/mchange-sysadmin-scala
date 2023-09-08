@@ -2,12 +2,14 @@ package com.mchange.sysadmin
 
 import scala.collection.*
 import scala.util.control.NonFatal
+
 import com.mchange.codegenutil.*
 
 import java.util.Date
 
 import jakarta.mail.*
 import jakarta.mail.internet.*
+
 
 object TaskRunner:
 
@@ -81,7 +83,10 @@ object TaskRunner:
       //msg.setText(defaultVerticalMessage(run))
       val htmlAlternative =
         val tmp = new MimeBodyPart()
-        tmp.setContent(task_result_html(run).text, "text/html")
+        def htmlText =
+          //debugPrettyPrintHtml(task_result_html(run).text)
+          prettyPrintHtml(task_result_html(run).text)
+        tmp.setContent(htmlText, "text/html")
         tmp
       val plainTextAlternative =
         val tmp = new MimeBodyPart()

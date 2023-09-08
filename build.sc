@@ -37,6 +37,7 @@ object sysadmin extends UntemplateModule with PublishModule {
       ivy"com.lihaoyi::os-lib:0.9.1",
       ivy"com.lihaoyi::pprint:0.8.1",
       ivy"org.apache.commons:commons-text:1.10.0",
+      ivy"org.jsoup:jsoup:1.16.1", // just to pretty-print HTML for now
       ivy"com.sun.mail:jakarta.mail:${JakartaMailVersion}",
       ivy"com.sun.mail:smtp:${JakartaMailVersion}",
     )

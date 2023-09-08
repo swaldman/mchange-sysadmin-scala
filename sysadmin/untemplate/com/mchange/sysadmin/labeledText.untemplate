@@ -1,5 +1,5 @@
 (tup : Tuple2[HtmlSafeText,HtmlSafeText])[]~()>  # Header delimeter, text start!
 <div class="labeled-text-outer">
   <span class="label"><( tup(0) )>:</span>
-  <div class="labeled-text-inner"><( tup(1) )></div>
+  <pre class="labeled-text-inner"><( tup(1) )></pre>
 </div>
