@@ -34,7 +34,7 @@ Here is a more complicated example that backs up a database and uploads the
 results to an [rclone](https://rclone.org/) destination.
 
 The task is defined
-within an abstract class, so it can be [trivially](https://github.com/swaldman/mchange-sysadmin-scripts/blob/main/taskbin/backup-postgres)
+within an [abstract class](https://github.com/swaldman/mchange-sysadmin-scripts/blob/main/taskbin/backup-db-utils.scala), so it can be [trivially](https://github.com/swaldman/mchange-sysadmin-scripts/blob/main/taskbin/backup-postgres)
 [specialized](https://github.com/swaldman/mchange-sysadmin-scripts/blob/main/taskbin/backup-mysql) for
 multiple databases.
 
