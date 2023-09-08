@@ -238,6 +238,16 @@ class TaskRunner[T]:
       carryForwardDescriber : T => Option[String] = defaultCarryForwardDescriber
     ) extends AbstractStep.Result:
       def carryForwardDescription : Option[String]= carryForwardDescriber(carryForward)
+      def withNotes( genNotes : => String ) : Result =
+        try
+          val notes = genNotes
+          this.copy( notes = notes )
+        catch
+          case NonFatal(t) =>
+            val msg =
+              s"""|Exception while generating notes:
+                  |  ${t.toString}""".stripMargin
+            this.copy( notes = msg )
     def exitCodeIsZero(run : Step.Run.Completed) : Boolean = run.result.exitCode.fold(false)( _ == 0 )
     def stepErrIsEmpty(run : Step.Run.Completed) : Boolean = run.result.stepErr.isEmpty
     def defaultIsSuccess(run : Step.Run.Completed) : Boolean = run.result.exitCode match
