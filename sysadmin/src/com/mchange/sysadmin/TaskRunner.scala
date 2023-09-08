@@ -241,13 +241,13 @@ class TaskRunner[T]:
       def withNotes( genNotes : => String ) : Result =
         try
           val notes = genNotes
-          this.copy( notes = notes )
+          this.copy( notes = Some( notes ) )
         catch
           case NonFatal(t) =>
             val msg =
               s"""|Exception while generating notes:
                   |  ${t.toString}""".stripMargin
-            this.copy( notes = msg )
+            this.copy( notes = Some( msg ) )
     def exitCodeIsZero(run : Step.Run.Completed) : Boolean = run.result.exitCode.fold(false)( _ == 0 )
     def stepErrIsEmpty(run : Step.Run.Completed) : Boolean = run.result.stepErr.isEmpty
     def defaultIsSuccess(run : Step.Run.Completed) : Boolean = run.result.exitCode match
