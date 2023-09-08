@@ -13,6 +13,8 @@ object Smtp:
     val Port = "SMTP_PORT"
     val User = "SMTP_USER"
     val Password = "SMTP_PASSWORD"
+    val StartTls = "SMTP_STARTTLS"
+    val StartTlsAlt = "SMTP_START_TLS"
     val Debug = "SMTP_DEBUG"
   object Prop:
     val Host = "mail.smtp.host"
@@ -53,12 +55,17 @@ object Smtp:
             None
           case (_, _, _) =>
             None
-      val startTlsEnabled = (propsMap.get(Prop.StartTlsEnable) orElse environment.get("SMTP_START_TLS") orElse environment.get("SMTP_STARTTLS")).map(_.toBoolean).getOrElse(false)
+      val specifiedPort : Option[Int] = (propsMap.get(Prop.Port) orElse environment.get(Env.Port)).map( _.toInt )
+
+      val startTlsEnabled =
+        (propsMap.get(Prop.StartTlsEnable) orElse environment.get(Env.StartTls) orElse environment.get(Env.StartTlsAlt))
+          .map(_.toBoolean)
+          .getOrElse( specifiedPort == Some(Port.StartTls) )
 
       // XXX: Can there be unauthenticated TLS? I'm presuming authentication suggests one for or another of TLS
-      val defaultPort = auth.fold(Port.Vanilla)(_ => if startTlsEnabled then Port.StartTls else Port.ImplicitTls)
+      def defaultPort = auth.fold(Port.Vanilla)(_ => if startTlsEnabled then Port.StartTls else Port.ImplicitTls)
 
-      val port = (propsMap.get(Prop.Port) orElse environment.get(Env.Port)).map( _.toInt ).getOrElse( defaultPort )
+      val port = specifiedPort.getOrElse( defaultPort )
       val debug = (propsMap.get(Prop.Debug) orElse environment.get(Env.Debug)).map(_.toBoolean).getOrElse(false)
       Context(host,port,auth,startTlsEnabled,debug)
     end apply
