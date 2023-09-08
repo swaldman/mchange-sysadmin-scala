@@ -2,6 +2,8 @@
 
 Some tools for doing sysadmin scripting in Scala
 
+[![scaladoc](https://javadoc.io/badge2/com.mchange/mchange-sysadmin-scala_3/scaladoc.svg)](https://javadoc.io/doc/com.mchange/mchange-sysadmin-scala_3)
+
 ### Cautious tasks with reports
 
 The main utility here is [`TaskRunner`](src/main/scala/com/mchange/sysadmin/TaskRunner.scala).
