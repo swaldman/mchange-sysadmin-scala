@@ -42,121 +42,126 @@ A bespoke case class `Pad` tracks the necessary state between steps. It retains
 the temporary backup destination file, which is deleted in a cleanup step after 
 the backup is uploaded or copied to its final destination.
 
+In general, check out [mchange-sysadmin-scripts](https://github.com/swaldman/mchange-sysadmin-scripts), built on top of this library.
+
 #### Example e-mailed report
 
-Prettier HTML-mail coming soon, I hope! But here's what (default) reports
-currently look like:
+Here's an example e-mail for a successfully executed task:
+
+![e-mail report, successfully executed task](doc/media/backup-postgres-succeeded.png)
+
+Here's a [PDF](doc/media/backup-postgres-succeeded.pdf) of that report, and the [same task failed](doc/media/backup-postgres-succeeded.pdf).
+
+### Detailed text reports
+
+Detailed text reports are also produced, in the logs (and as `text/plain` alternates in e-mail reports):
 
 ```plaintext
 =====================================================================
-[tickle5]: Backup mysql, all databases -- SUCCEEDED
+ [because.lan] FAILED: Backup Postgres, all databases
 =====================================================================
-Timestamp: 2023-09-04T19:44:41Z
-Succeeded overall? Yes
+ Timestamp: 2023-09-08T10:17:50-04:00
+ Succeeded overall? No
 
-SEQUENTIAL:
+ SEQUENTIAL:
 ---------------------------------------------------------------------
-1. Ensure availability of rclone, if necessary
+ 1. Ensure availability of rclone, if necessary
 ---------------------------------------------------------------------
-Action: <internal function>
-Succeeded? Yes
-Exit code: 0
+ rclone --version
+ Succeeded? Yes
+ Exit code: 0
 
-out:
-    rclone v1.57.0-DEV
-    - os/version: centos 8 (64 bit)
-    - os/kernel: 4.18.0-512.el8.x86_64 (x86_64)
-    - os/type: linux
-    - os/arch: amd64
-    - go/version: go1.16.12
-    - go/linking: dynamic
-    - go/tags: none
+ out:
+     rclone v1.63.1
+     - os/version: darwin 13.5.1 (64 bit)
+     - os/kernel: 22.6.0 (x86_64)
+     - os/type: darwin
+     - os/arch: amd64
+     - go/version: go1.20.6
+     - go/linking: dynamic
+     - go/tags: none
 
-err:
-    <EMPTY>
+ err:
+     <empty>
 
-notes:
-    destpath: onedrive:cloud-backups/mysql
+ notes:
+     destpath: onedrive:cloud-backups
 
-carryforward:
-    Pad(tmpDir = None, backupFile = None)
-
----------------------------------------------------------------------
-2. Create Temp Dir
----------------------------------------------------------------------
-Action: <internal function>
-Succeeded? Yes
-
-out:
-    <EMPTY>
-
-err:
-    <EMPTY>
-
-carryforward:
-    Pad(tmpDir = Some(value = /tmp/17588242228680154941), backupFile = None)
+ carryforward:
+     Pad(tmpDir = None, backupFile = None)
 
 ---------------------------------------------------------------------
-3. Perform mysql Backup
+ 2. Create Temp Dir
 ---------------------------------------------------------------------
-Action: <internal function>
-Succeeded? Yes
-Exit code: 0
+ os.temp.dir()
+ Succeeded? Yes
 
-out:
-    <EMPTY>
+ out:
+     <empty>
 
-err:
-    <EMPTY>
+ err:
+     <empty>
 
-notes:
-    Backup size: 128.062 MiB
-
-carryforward:
-    Pad(
-      tmpDir = Some(value = /tmp/17588242228680154941),
-      backupFile = Some(value = /tmp/17588242228680154941/tickle5-mysql-dumpall-2023-09-04)
-    )
+ carryforward:
+     Pad(
+       tmpDir = Some(value = /var/folders/by/35mx6ty94jng67n4kh2ps9tc0000gn/T/886556305491605568),
+       backupFile = None
+     )
 
 ---------------------------------------------------------------------
-4. Copy backup to storage
+ 3. Perform Postgres Backup
 ---------------------------------------------------------------------
-Action: <internal function>
-Succeeded? Yes
-Exit code: 0
+ postgres-dump-all-to-file <temporary-backup-file>
+ Succeeded? No
+ Exit code: 1
 
-out:
-    <EMPTY>
+ out:
+     <empty>
 
-err:
-    <EMPTY>
+ err:
+     su: Sorry
 
-carryforward:
-    Pad(
-      tmpDir = Some(value = /tmp/17588242228680154941),
-      backupFile = Some(value = /tmp/17588242228680154941/tickle5-mysql-dumpall-2023-09-04)
-    )
+ notes:
+     Backup size: 0 bytes
+
+ carryforward:
+     Pad(
+       tmpDir = Some(value = /var/folders/by/35mx6ty94jng67n4kh2ps9tc0000gn/T/886556305491605568),
+       backupFile = Some(
+         value = /var/folders/by/35mx6ty94jng67n4kh2ps9tc0000gn/T/886556305491605568/because.lan-pgdumpall-2023-09-08
+       )
+     )
+
+---------------------------------------------------------------------
+ 4. Copy backup to storage
+---------------------------------------------------------------------
+ 'rclone mkdir' then 'rclone copy' or else 'mkdir' then 'cp'
+ Succeeded? No
+
+ SKIPPED!
 
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
-BEST-ATTEMPT CLEANUPS:
+ BEST-EFFORT CLEANUPS:
 ---------------------------------------------------------------------
-Remove temporary local backup.
+ Remove temporary local backup.
 ---------------------------------------------------------------------
-Action: <internal function>
-Succeeded? Yes
+ os.remove( <backup-file> )
+ Succeeded? Yes
 
-out:
-    <EMPTY>
+ out:
+     <empty>
 
-err:
-    <EMPTY>
+ err:
+     <empty>
 
-carryforward:
-    Pad(
-      tmpDir = Some(value = /tmp/17588242228680154941),
-      backupFile = Some(value = /tmp/17588242228680154941/tickle5-mysql-dumpall-2023-09-04)
-    )
+ carryforward:
+     Pad(
+       tmpDir = Some(value = /var/folders/by/35mx6ty94jng67n4kh2ps9tc0000gn/T/886556305491605568),
+       backupFile = Some(
+         value = /var/folders/by/35mx6ty94jng67n4kh2ps9tc0000gn/T/886556305491605568/because.lan-pgdumpall-2023-09-08
+       )
+     )
 
 =====================================================================
 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
