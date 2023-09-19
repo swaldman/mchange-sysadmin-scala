@@ -167,6 +167,10 @@ Detailed text reports are also produced, in the logs (and as `text/plain` altern
 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 ```
 
+## Other utilties
+
+Includes some facilities to parse `nginx` logs.
+
 ## Developer Docs
 
 Dependency Javadocs:
