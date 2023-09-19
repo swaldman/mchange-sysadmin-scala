@@ -56,19 +56,22 @@ object TaskRunner:
     def smtpOnly(
       from : String = Env.Required.mailFrom,
       to : String = Env.Required.mailTo,
-      compose : (String, String, AbstractTask.Run, Smtp.Context) => MimeMessage = Reporting.defaultCompose
+      compose : (String, String, AbstractTask.Run, Smtp.Context) => MimeMessage = Reporting.defaultCompose,
+      onlyMailFailures : Boolean = false
     )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] = List(
       ( run : AbstractTask.Run ) =>
-        val msg = compose( from, to, run, context )
-        context.sendMessage(msg)
+        if !onlyMailFailures || !run.success then
+          val msg = compose( from, to, run, context )
+          context.sendMessage(msg)
     )
     def smtpAndStdOut(
       from : String = Env.Required.mailFrom,
       to : String = Env.Required.mailTo,
       compose : (String, String, AbstractTask.Run, Smtp.Context) => MimeMessage = Reporting.defaultCompose,
-      text : AbstractTask.Run => String = Reporting.defaultVerticalMessage
+      text : AbstractTask.Run => String = Reporting.defaultVerticalMessage,
+      onlyMailFailures : Boolean = false
     )( using context : Smtp.Context ) : List[AbstractTask.Run => Unit] =
-      smtpOnly(from,to,compose) ++ stdOutOnly(text)
+      smtpOnly(from,to,compose,onlyMailFailures) ++ stdOutOnly(text)
 
     def default(
       from : String = Env.Required.mailFrom,
