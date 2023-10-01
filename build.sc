@@ -11,10 +11,10 @@ object sysadmin extends UntemplateModule with PublishModule {
 
   val JakartaMailVersion = "2.0.1"
 
-  override def scalaVersion = "3.3.0"
+  override def scalaVersion = "3.3.1"
 
   override def artifactName = "mchange-sysadmin-scala"
-  override def publishVersion = T{"0.0.10"}
+  override def publishVersion = T{"0.0.11-SNAPSHOT"}
   override def pomSettings    = T{
     PomSettings(
       description = "A library of utilities for sysadmin scripts",
