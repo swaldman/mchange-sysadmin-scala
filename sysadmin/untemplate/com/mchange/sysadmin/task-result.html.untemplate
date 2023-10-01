@@ -125,21 +125,21 @@ val title = TaskRunner.Reporting.defaultTitle(run)
   } // else
 ()>
     </div> <!-- sequential -->
-    <h2>Best-effort cleanups:</h2>
-    <div class="best-effort-cleanups">
+    <h2>Best-effort followups:</h2>
+    <div class="best-effort-followups">
 <()
-  if (run.bestEffortCleanups.isEmpty) {
-    writer.write("""<div class="empty-list">This task includes no best-effort-cleanup steps.</div>""")
+  if (run.bestEffortFollowups.isEmpty) {
+    writer.write("""<div class="empty-list">This task includes no best-effort-followup steps.</div>""")
   }
   else {
-    run.bestEffortCleanups.map(sr => StepRunMaybeIndexed(sr, None) ).foreach { srmi =>
+    run.bestEffortFollowups.map(sr => StepRunMaybeIndexed(sr, None) ).foreach { srmi =>
 ()>
        <( stepRun( srmi ) )>
 <()
-    } // run.bestEffortCleanups.foreach
+    } // run.bestEffortFollowups.foreach
   } // else
 ()>  
-    </div> <!-- best-effort-cleanup -->
+    </div> <!-- best-effort-followups -->
   </body>
 </html>
 

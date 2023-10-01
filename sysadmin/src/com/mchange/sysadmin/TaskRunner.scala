@@ -17,13 +17,13 @@ object TaskRunner:
     trait Run:
       def task : AbstractTask
       def sequential : List[AbstractStep.Run]
-      def bestEffortCleanups : List[AbstractStep.Run]
+      def bestEffortFollowups : List[AbstractStep.Run]
       def success : Boolean
 
   trait AbstractTask:
     def name                : String
     def sequential          : List[AbstractStep]
-    def bestAttemptCleanups : List[AbstractStep]
+    def bestAttemptFollowups : List[AbstractStep]
 
   object AbstractStep:
     trait Result:
@@ -119,13 +119,13 @@ object TaskRunner:
             | SEQUENTIAL:
             |${defaultVerticalMessageSequential(run.sequential)}""".stripMargin.trim + LineSep + LineSep
 
-      def cleanupsSectionIfNecessary =
+      def followupsSectionIfNecessary =
         s"""|-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
             |
-            | BEST-EFFORT CLEANUPS:
-            |${defaultVerticalMessageBestAttemptCleanups(run.bestEffortCleanups)}""".stripMargin.trim
+            | BEST-EFFORT FOLLOWUPS:
+            |${defaultVerticalMessageBestAttemptFollowups(run.bestEffortFollowups)}""".stripMargin.trim
 
-      val midsection = if run.bestEffortCleanups.isEmpty then "" else (cleanupsSectionIfNecessary + LineSep + LineSep)
+      val midsection = if run.bestEffortFollowups.isEmpty then "" else (followupsSectionIfNecessary + LineSep + LineSep)
 
       val footer =
         s"""|
@@ -140,8 +140,8 @@ object TaskRunner:
         accum + (LineSep*2) + defaultVerticalMessage(next)
       untrimmed.trim
 
-    def defaultVerticalMessageBestAttemptCleanups( bestAttemptCleanups : List[AbstractStep.Run] ) : String =
-      val untrimmed = bestAttemptCleanups.foldLeft(""): (accum, next) =>
+    def defaultVerticalMessageBestAttemptFollowups( bestAttemptFollowups : List[AbstractStep.Run] ) : String =
+      val untrimmed = bestAttemptFollowups.foldLeft(""): (accum, next) =>
         accum + (LineSep*2) + defaultVerticalMessage(next)
       untrimmed.trim
 
@@ -355,7 +355,7 @@ class TaskRunner[T]:
         case (head : Step.Run.Completed) :: tail if head.success => Step.Run.Completed(head.result.carryForward, next) :: accum
         case other => Step.Run.Skipped(next) :: accum
 
-    val bestEffortReversed = task.bestAttemptCleanups.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
+    val bestEffortReversed = task.bestAttemptFollowups.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
       val lastCompleted = seqRunsReversed.collectFirst { case completed : Step.Run.Completed => completed }
       Step.Run.Completed(lastCompleted.fold(task.init)(_.result.carryForward),next) :: accum
 
@@ -375,14 +375,14 @@ class TaskRunner[T]:
     case class Run(
       task : Task,
       sequential : List[Step.Run],
-      bestEffortCleanups : List[Step.Run],
+      bestEffortFollowups : List[Step.Run],
       isSuccess : Run => Boolean = Run.usualSuccessCriterion
     ) extends AbstractTask.Run:
       def success = isSuccess( this )
   trait Task extends TaskRunner.AbstractTask:
-    def name                : String
-    def init                : T
-    def sequential          : List[Step]
-    def bestAttemptCleanups : List[Step]
+    def name                 : String
+    def init                 : T
+    def sequential           : List[Step]
+    def bestAttemptFollowups : List[Step]
   end Task
 end TaskRunner

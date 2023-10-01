@@ -18,9 +18,9 @@ The idea is you
 
   If all steps succeed, the overall task succeeds. If any step fails, later steps
   are skipped and the overall task fails
-* Define a list of "best-attempt cleanups", each attempted exactly once
-  regardless of whether the main sequence or other clean-up steps have succeeded
-  or failed. The cleanup steps are given the carryforward produced by the last
+* Define a list of "best-attempt followups", each attempted exactly once
+  regardless of whether the main sequence or other followup steps have succeeded
+  or failed. The followup steps are given the carryforward produced by the last
   unskipped task.
 
 When you run a task, you supply a list "reporters", which generated and send
@@ -39,7 +39,7 @@ within an [abstract class](https://github.com/swaldman/mchange-sysadmin-scripts/
 multiple databases.
 
 A bespoke case class `Pad` tracks the necessary state between steps. It retains
-the temporary backup destination file, which is deleted in a cleanup step after 
+the temporary backup destination file, which is deleted in a followup step after 
 the backup is uploaded or copied to its final destination.
 
 In general, check out [mchange-sysadmin-scripts](https://github.com/swaldman/mchange-sysadmin-scripts), built on top of this library.
@@ -142,7 +142,7 @@ Detailed text reports are also produced, in the logs (and as `text/plain` altern
 
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
- BEST-EFFORT CLEANUPS:
+ BEST-EFFORT FOLLOWUPS:
 ---------------------------------------------------------------------
  Remove temporary local backup.
 ---------------------------------------------------------------------
