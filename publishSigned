@@ -1,5 +1,7 @@
 #!/usr/bin/env -S scala-cli shebang
 
+//> using dep "com.lihaoyi::os-lib:0.9.1"
+
 // expects SONATYPE_USERNAME and SONATYPE_PASSWORD to be set prior to running!
 
 val console = System.console()
@@ -21,12 +23,27 @@ if (sonatypePassword == null) {
 
 val gpgPassphrase = console.readPassword("Please enter GPG passphrase for signing: ")
 
-val argsPreparsed = Seq(
+// see https://github.com/keybase/keybase-issues/issues/2798
+
+// val tty = os.proc("tty").call().out.trim()
+
+// val additionalEnv = Map("GPG_TTY" -> tty )
+
+val result = os.proc(
   "./mill", "mill.scalalib.PublishModule/publishAll", "__.publishArtifacts",
   "--sonatypeCreds", s"${sonatypeUsername}:${sonatypePassword}",
-  "--gpgArgs", s"--passphrase=${new String(gpgPassphrase)},--batch,--yes,-a,-b",
+  "--gpgArgs", s"--passphrase=${new String(gpgPassphrase)},--batch,--yes,-a,-b,--pinentry-mode=loopback",
   "--release", "false"
-)
+).call( /* env = additionalEnv, */ mergeErrIntoOut = true )
 
-import scala.sys.process._
-argsPreparsed.!
+System.err.println( result.out.trim() )
+
+val ec = result.exitCode
+
+if ec != 0 then
+  System.err.println(s"publishSigned failed with exit code: ${ec}")
+  System.exit(ec)
+
+
+
+
