@@ -4,7 +4,9 @@ import java.util.Properties
 import jakarta.mail.*
 import jakarta.mail.internet.*
 import jakarta.mail.{Authenticator, PasswordAuthentication, Session, Transport}
-import scala.util.Using
+import java.io.BufferedInputStream
+import java.util.Properties
+import scala.util.{Try,Failure,Success,Using}
 import scala.jdk.CollectionConverters.*
 
 object Smtp:
@@ -16,6 +18,7 @@ object Smtp:
     val StartTls = "SMTP_STARTTLS"
     val StartTlsAlt = "SMTP_START_TLS"
     val Debug = "SMTP_DEBUG"
+    val Properties = "SMTP_PROPERTIES" // path to a properties file containing the properties below
   object Prop:
     val Host = "mail.smtp.host"
     val Port = "mail.smtp.port"
@@ -32,7 +35,30 @@ object Smtp:
   case class Auth( user : String, password : String ) extends Authenticator:
     override def getPasswordAuthentication() : PasswordAuthentication = new PasswordAuthentication(user, password)
   object Context:
-    given Context = apply(System.getProperties, sys.env)
+    given Context =
+      val props =
+        sys.env.get(Env.Properties) match
+          case Some( pathStr ) =>
+            val path = os.Path(pathStr)
+            val tryProps = Try:
+              if os.exists(path) then
+                Using.resource(new BufferedInputStream(os.read.inputStream(path))): is =>
+                  val props = new Properties( System.getProperties )
+                  props.load(is)
+                  props
+              else
+                System.err.println(s"[SMTP config] No file at path specified by ${Env.Properties}, ${path}. Reverting to system properties only.")
+                System.getProperties
+            tryProps match
+              case Success( props ) => props
+              case Failure( t ) =>
+                System.err.println(s"[SMTP config] Reverting to system properties only. Exception while loading SMTP properties at path specified by ${Env.Properties}, ${path}:")
+                t.printStackTrace()
+                System.getProperties
+          case None =>
+            System.getProperties
+      end props
+      this.apply( props, sys.env )
     def apply( properties : Properties, environment : Map[String,String]) : Context =
       val propsMap = properties.asScala
       val host = (propsMap.get(Prop.Host) orElse environment.get(Env.Host)).map(_.trim).getOrElse( throw new SysadminException("No SMTP Host Configured") )
