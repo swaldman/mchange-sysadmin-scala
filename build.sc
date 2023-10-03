@@ -7,7 +7,7 @@ import mill.scalalib.publish._
 import $ivy.`com.mchange::untemplate-mill:0.1.0`
 import untemplate.mill._
 
-object sysadmin extends UntemplateModule with PublishModule {
+object sysadmin extends RootModule with UntemplateModule with PublishModule {
 
   val JakartaMailVersion = "2.0.1"
 
