@@ -109,6 +109,21 @@ val title = TaskRunner.Reporting.defaultTitle(run)
     <h1><( title )></h1>
     <div class="top-field"><b>Succeeded overall?:</b> <( yn(run.success) )></div>
     <div class="top-field"><b>Timestamp:</b> <span class="timestamp"><( timestamp.htmlSafeText )></span></div>
+    <h2>Best-effort setups:</h2>
+    <div class="best-effort-setups">
+<()
+  if (run.bestEffortSetups.isEmpty) {
+    writer.write("""<div class="empty-list">This task includes no best-effort-setup steps.</div>""")
+  }
+  else {
+    run.bestEffortSetups.map(sr => StepRunMaybeIndexed(sr, None) ).foreach { srmi =>
+()>
+       <( stepRun( srmi ) )>
+<()
+    } // run.bestEffortSetups.foreach
+  } // else
+()>
+    </div> <!-- best-effort-setups -->
     <h2>Sequential steps:</h2>
     <div class="sequential">
 <()

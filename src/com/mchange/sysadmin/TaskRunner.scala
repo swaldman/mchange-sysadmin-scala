@@ -16,6 +16,7 @@ object TaskRunner:
   object AbstractTask:
     trait Run:
       def task : AbstractTask
+      def bestEffortSetups : List[AbstractStep.Run]
       def sequential : List[AbstractStep.Run]
       def bestEffortFollowups : List[AbstractStep.Run]
       def success : Boolean
@@ -41,10 +42,11 @@ object TaskRunner:
       def step         : AbstractStep
       def success      : Boolean
   trait AbstractStep:
-    def name              : String
-    def environment       : Map[String,String]
-    def workingDirectory  : os.Path
-    def actionDescription : Option[String]
+    def name                   : String
+    def environment            : Map[String,String]
+    def workingDirectory       : os.Path
+    def actionDescription      : Option[String]
+    def essentialNonsequential : Boolean
 
   object Reporters:
     def stdOutOnly(formatter : AbstractTask.Run => String = Reporting.defaultVerticalMessage) : List[AbstractTask.Run => Unit] = List(
@@ -109,30 +111,39 @@ object TaskRunner:
       hostname.fold("TASK")(hn => "[" + hn + "]") + " " + (if run.success then "SUCCEEDED" else "FAILED") + ": " + run.task.name
 
     def defaultVerticalMessage( run : AbstractTask.Run ) =
-      val mainSection =
+      val topSection =
         s"""|=====================================================================
             | ${defaultTitle(run)}
             |=====================================================================
             | Timestamp: ${timestamp}
-            | Succeeded overall? ${yn( run.success )}
+            | Succeeded overall? ${yn( run.success )}""".stripMargin.trim + LineSep + LineSep
+
+      def setupsSectionIfNecessary =
+        s"""| BEST-EFFORT SETUPS:
+            |${defaultVerticalMessageBestAttempts(run.bestEffortSetups)}
             |
-            | SEQUENTIAL:
+            |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-""".stripMargin.trim
+
+      val setups = if run.bestEffortSetups.isEmpty then (setupsSectionIfNecessary + LineSep + LineSep) else ""
+
+      val seqsection =
+        s"""| SEQUENTIAL:
             |${defaultVerticalMessageSequential(run.sequential)}""".stripMargin.trim + LineSep + LineSep
 
       def followupsSectionIfNecessary =
         s"""|-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
             |
             | BEST-EFFORT FOLLOWUPS:
-            |${defaultVerticalMessageBestAttemptFollowups(run.bestEffortFollowups)}""".stripMargin.trim
+            |${defaultVerticalMessageBestAttempts(run.bestEffortFollowups)}""".stripMargin.trim
 
-      val midsection = if run.bestEffortFollowups.isEmpty then "" else (followupsSectionIfNecessary + LineSep + LineSep)
+      val followups = if run.bestEffortFollowups.isEmpty then "" else (followupsSectionIfNecessary + LineSep + LineSep)
 
       val footer =
         s"""|
             |=====================================================================
             |.   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .""".stripMargin.trim + LineSep
 
-      mainSection + midsection + footer
+      topSection + setups + seqsection + followups + footer
 
     def defaultVerticalMessageSequential( sequential : List[AbstractStep.Run] ) : String =
       val tups = immutable.LazyList.from(1).zip(sequential)
@@ -140,8 +151,8 @@ object TaskRunner:
         accum + (LineSep*2) + defaultVerticalMessage(next)
       untrimmed.trim
 
-    def defaultVerticalMessageBestAttemptFollowups( bestAttemptFollowups : List[AbstractStep.Run] ) : String =
-      val untrimmed = bestAttemptFollowups.foldLeft(""): (accum, next) =>
+    def defaultVerticalMessageBestAttempts( bestAttempts : List[AbstractStep.Run] ) : String =
+      val untrimmed = bestAttempts.foldLeft(""): (accum, next) =>
         accum + (LineSep*2) + defaultVerticalMessage(next)
       untrimmed.trim
 
@@ -150,6 +161,13 @@ object TaskRunner:
     def defaultVerticalMessage( tup : Tuple2[Int,AbstractStep.Run]) : String = defaultVerticalMessage(Some(tup(0)),tup(1))
 
     def defaultVerticalMessage( index : Option[Int], run : AbstractStep.Run ) : String =
+
+      val sequential = index.nonEmpty
+      val essentialAnnotation =
+        if sequential then ""
+        else if run.step.essentialNonsequential then "(ESSENTIAL!)"
+        else "(nonessential)"
+
 //      def action( step : Step ) : String =
 //        step match
 //          case exec : Step.Exec => s"Parsed command: ${exec.parsedCommand}"
@@ -166,7 +184,7 @@ object TaskRunner:
         s"""| ${ad}
             |""".stripMargin
       val succeededSection =
-        s"""| Succeeded? ${yn( run.success )}
+        s"""| Succeeded? ${yn( run.success )} ${essentialAnnotation}
             |""".stripMargin
       header + mbActionDescription + succeededSection + body
 
@@ -267,7 +285,8 @@ class TaskRunner[T]:
       isSuccess : Step.Run.Completed => Boolean = defaultIsSuccess,
       workingDirectory : os.Path = os.pwd,
       environment : immutable.Map[String,String] = sys.env,
-      actionDescription : Option[String] = None
+      actionDescription : Option[String] = None,
+      essentialNonsequential : Boolean = false
     ) extends Step:
       override def toString() = s"Step.Arbitrary(name=${name}, workingDirectory=${workingDirectory}, environment=********)"
     case class Exec (
@@ -277,6 +296,7 @@ class TaskRunner[T]:
       environment : immutable.Map[String,String] = sys.env,
       carrier : Carrier = Carrier.carryPrior,
       isSuccess : Step.Run.Completed => Boolean = defaultIsSuccess,
+      essentialNonsequential : Boolean = false
     ) extends Step:
       def actionDescription = Some(s"Parsed command: ${parsedCommand}")
       override def toString() = s"Step.Exec(name=${name}, parsedCommand=${parsedCommand}, workingDirectory=${workingDirectory}, environment=********)"
@@ -348,18 +368,31 @@ class TaskRunner[T]:
 
   val carryPrior = Carrier.carryPrior
 
+  def nonsequentialsOkay( stepRuns : List[Step.Run] ) = stepRuns.forall( stepRun => !stepRun.step.essentialNonsequential || stepRun.success )
+
   def silentRun(task : Task) : Task.Run =
-    val seqRunsReversed = task.sequential.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
-      accum match
-        case Nil => Step.Run.Completed(task.init, next) :: accum
-        case (head : Step.Run.Completed) :: tail if head.success => Step.Run.Completed(head.result.carryForward, next) :: accum
-        case other => Step.Run.Skipped(next) :: accum
+    val bestEffortSetupsReversed =
+      val init = task.init
+      task.bestEffortSetups.foldLeft( Nil : List[Step.Run] )( ( accum, next ) => Step.Run.Completed(init, next) :: accum )
 
-    val bestEffortReversed = task.bestAttemptFollowups.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
+    val seqRunsReversed =
+      val setupOk = nonsequentialsOkay(bestEffortSetupsReversed)
+      if setupOk then
+        task.sequential.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
+          accum match
+            case Nil => Step.Run.Completed(task.init, next) :: accum
+            case (head : Step.Run.Completed) :: tail if head.success => Step.Run.Completed(head.result.carryForward, next) :: accum
+            case other => Step.Run.Skipped(next) :: accum
+      else
+        task.sequential.foldLeft( Nil : List[Step.Run] )( ( accum, next ) => Step.Run.Skipped(next) :: accum )
+
+    val bestEffortFollowupsReversed =
       val lastCompleted = seqRunsReversed.collectFirst { case completed : Step.Run.Completed => completed }
-      Step.Run.Completed(lastCompleted.fold(task.init)(_.result.carryForward),next) :: accum
+      val commonCarryforward = lastCompleted.fold(task.init)(_.result.carryForward) 
+      task.bestEffortFollowups.foldLeft( Nil : List[Step.Run] )( ( accum, next ) => Step.Run.Completed(commonCarryforward, next) :: accum )
 
-    Task.Run(task, seqRunsReversed.reverse,bestEffortReversed.reverse)
+    Task.Run(task, bestEffortSetupsReversed.reverse, seqRunsReversed.reverse, bestEffortFollowupsReversed.reverse)
+  end silentRun
 
   def runAndReport(task : Task, reporters : List[Task.Run => Unit]) : Unit =
     val run = this.silentRun(task)
@@ -371,18 +404,24 @@ class TaskRunner[T]:
 
   object Task:
     object Run:
-      def usualSuccessCriterion(run : Run) = run.sequential.isEmpty || run.sequential.last.success
+      def usualSuccessCriterion(run : Run) =
+        def setupsOkay = nonsequentialsOkay(run.bestEffortSetups)
+        def sequentialsOkay = run.sequential.isEmpty || run.sequential.last.success
+        def followupsOkay = nonsequentialsOkay(run.bestEffortFollowups)
+        setupsOkay && sequentialsOkay && followupsOkay
     case class Run(
       task : Task,
+      bestEffortSetups : List[Step.Run],
       sequential : List[Step.Run],
       bestEffortFollowups : List[Step.Run],
       isSuccess : Run => Boolean = Run.usualSuccessCriterion
     ) extends AbstractTask.Run:
       def success = isSuccess( this )
   trait Task extends TaskRunner.AbstractTask:
-    def name                 : String
-    def init                 : T
-    def sequential           : List[Step]
-    def bestAttemptFollowups : List[Step]
+    def name                : String
+    def init                : T
+    def bestEffortSetups    : List[Step]
+    def sequential          : List[Step]
+    def bestEffortFollowups : List[Step]
   end Task
 end TaskRunner
