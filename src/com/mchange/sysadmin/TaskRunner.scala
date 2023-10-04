@@ -24,7 +24,7 @@ object TaskRunner:
   trait AbstractTask:
     def name                : String
     def sequential          : List[AbstractStep]
-    def bestAttemptFollowups : List[AbstractStep]
+    def bestEffortFollowups : List[AbstractStep]
 
   object AbstractStep:
     trait Result:
