@@ -14,14 +14,21 @@ The idea is you
   (You can use `Unit` if you don't need to track state)
 * Define a sequence of steps that accept and pass forward your carryforward.
   Each step will be evaluated, and its exit code, out, err, etc. will be 
-  included in reports.
-
-  If all steps succeed, the overall task succeeds. If any step fails, later steps
-  are skipped and the overall task fails
-* Define a list of "best-attempt followups", each attempted exactly once
+  included in reports. If all steps succeed, the overall task succeeds. If any step fails, later steps
+  are skipped and the overall task fails. This list can be empty.
+* Define a list of "best-effort setups", each attempted exactly once
+  regardless of whether other setup steps have succeeded
+  or failed. The setup steps are given the initial value of the carryforward,
+  and their carryforward results are ignored. This list can be empty.
+* Define a list of "best-effort followups", each attempted exactly once
   regardless of whether the main sequence or other followup steps have succeeded
   or failed. The followup steps are given the carryforward produced by the last
-  unskipped task.
+  unskipped task, and their carryforward results are ignored. This list can be empty.
+  
+In general only the sequential steps affect whether the task succeeds overall.
+However, if you set the field `essentialNonsequential` to true on a nonsequential
+(setup or followup) step, then failure of that step will cause the overall task
+to fail.
 
 When you run a task, you supply a list "reporters", which generated and send
 reports about the run. SMTP, stdout, and stderr reporters are defined, though
