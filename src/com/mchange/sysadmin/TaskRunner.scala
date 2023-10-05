@@ -46,7 +46,7 @@ object TaskRunner:
     def environment            : Map[String,String]
     def workingDirectory       : os.Path
     def actionDescription      : Option[String]
-    def essentialNonsequential : Boolean
+    def essential              : Option[Boolean]
 
   object Reporters:
     def stdOutOnly(formatter : AbstractTask.Run => String = Reporting.defaultVerticalMessage) : List[AbstractTask.Run => Unit] = List(
@@ -163,10 +163,7 @@ object TaskRunner:
     def defaultVerticalMessage( index : Option[Int], run : AbstractStep.Run ) : String =
 
       val sequential = index.nonEmpty
-      val essentialAnnotation =
-        if sequential then ""
-        else if run.step.essentialNonsequential then "(ESSENTIAL!)"
-        else "(nonessential)"
+      val essentialAnnotation = run.step.essential.fold("")(ess => if ess then "(essential)" else "(nonessential)")
 
 //      def action( step : Step ) : String =
 //        step match
@@ -286,7 +283,7 @@ class TaskRunner[T]:
       workingDirectory : os.Path = os.pwd,
       environment : immutable.Map[String,String] = sys.env,
       actionDescription : Option[String] = None,
-      essentialNonsequential : Boolean = false
+      essential : Option[Boolean] = None
     ) extends Step:
       override def toString() = s"Step.Arbitrary(name=${name}, workingDirectory=${workingDirectory}, environment=********)"
     case class Exec (
@@ -296,7 +293,7 @@ class TaskRunner[T]:
       environment : immutable.Map[String,String] = sys.env,
       carrier : Carrier = Carrier.carryPrior,
       isSuccess : Step.Run.Completed => Boolean = defaultIsSuccess,
-      essentialNonsequential : Boolean = false
+      essential : Option[Boolean] = None
     ) extends Step:
       def actionDescription = Some(s"Parsed command: ${parsedCommand}")
       override def toString() = s"Step.Exec(name=${name}, parsedCommand=${parsedCommand}, workingDirectory=${workingDirectory}, environment=********)"
@@ -368,7 +365,7 @@ class TaskRunner[T]:
 
   val carryPrior = Carrier.carryPrior
 
-  def nonsequentialsOkay( stepRuns : List[Step.Run] ) = stepRuns.forall( stepRun => !stepRun.step.essentialNonsequential || stepRun.success )
+  def nonsequentialsOkay( stepRuns : List[Step.Run] ) = stepRuns.forall( stepRun => !stepRun.step.essential.getOrElse(false) || stepRun.success )
 
   def silentRun(task : Task) : Task.Run =
     val bestEffortSetupsReversed =
@@ -381,7 +378,7 @@ class TaskRunner[T]:
         task.sequential.foldLeft( Nil : List[Step.Run] ): ( accum, next ) =>
           accum match
             case Nil => Step.Run.Completed(task.init, next) :: accum
-            case (head : Step.Run.Completed) :: tail if head.success => Step.Run.Completed(head.result.carryForward, next) :: accum
+            case (head : Step.Run.Completed) :: tail if head.success || !head.step.essential.getOrElse(true) => Step.Run.Completed(head.result.carryForward, next) :: accum
             case other => Step.Run.Skipped(next) :: accum
       else
         task.sequential.foldLeft( Nil : List[Step.Run] )( ( accum, next ) => Step.Run.Skipped(next) :: accum )

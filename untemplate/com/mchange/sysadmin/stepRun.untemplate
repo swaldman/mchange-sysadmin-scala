@@ -8,9 +8,9 @@ val StepRunMaybeIndexed( stepRun, mbIndex ) = srmi
      <( mbActionDescription( stepRun.step ) )>
      <div class="step-field"><b>Succeeded?</b> <(yn(stepRun.success))></div>
 <()
-  if mbIndex.isEmpty then { // not a sequential step
+  stepRun.step.essential.foreach { ess => // essential is overridden
 ()>
-     <div class="step-field"><b>Essential?</b> <( yn(stepRun.step.essentialNonsequential) )></div>
+     <div class="step-field"><b>Essential?</b> <( yn(ess) )></div>
 <()
   }
 ()>
