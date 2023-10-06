@@ -1,7 +1,7 @@
-(run : TaskRunner.AbstractStep.Run)[]~()>  # Header delimeter, text start!
+(run : TaskRunner.AnyStepRun)[]~()>  # Header delimeter, text start!
 <()
   run match {
-    case completed : TaskRunner.AbstractStep.Run.Completed =>
+    case completed : TaskRunner.AnyStepRunCompleted =>
 ()>
 <( mbExitCode( completed ) )>
 <( labeledTextOrNA("out".htmlSafeText, completed.result.stepOut.htmlSafeText).trim )>
@@ -9,7 +9,7 @@
 <( mbLabeledText( completed.result.notes.map( n => ("notes".htmlSafeText, n.htmlSafeText) ) ) )>
 <( mbLabeledText( completed.result.carryForwardDescription.map( cfd => ("carryforward".htmlSafeText, cfd.htmlSafeText) ) ) )>
 <()
-    case skipped : TaskRunner.AbstractStep.Run.Skipped =>
+    case skipped : TaskRunner.AnyStepRunSkipped =>
 ()>
 <div class="say-skipped">SKIPPED</div>
 <()

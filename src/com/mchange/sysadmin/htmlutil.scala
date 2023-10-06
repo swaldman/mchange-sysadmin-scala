@@ -5,12 +5,12 @@ import org.jsoup.parser.*
 
 import scala.jdk.CollectionConverters.*
 
-case class StepRunMaybeIndexed( run : TaskRunner.AbstractStep.Run, mbIndex : Option[Int])
+case class StepRunMaybeIndexed( run : TaskRunner.AnyStepRun, mbIndex : Option[Int])
 
-def colorClass( run : TaskRunner.AbstractStep.Run ) = run match
-  case completed : TaskRunner.AbstractStep.Run.Completed =>
+def colorClass( run : TaskRunner.AnyStepRun ) = run match
+  case completed : TaskRunner.AnyStepRunCompleted =>
     if completed.success then "success" else "failure"
-  case skipped : TaskRunner.AbstractStep.Run.Skipped =>
+  case skipped : TaskRunner.AnyStepRunSkipped =>
     "skipped"
 
 def mbLabeledText( mlt : Option[Tuple2[HtmlSafeText,HtmlSafeText]]) : String =

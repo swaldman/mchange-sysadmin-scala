@@ -7,7 +7,7 @@ val timestamp = RFC_1123_DATE_TIME.format(now)
 val title = TaskRunner.Reporting.defaultTitle(run)
 
 
-(run : TaskRunner.AbstractTask.Run)[]~()>  # Header delimeter, text start!
+(run : TaskRunner.AnyTaskRun)[]~()>  # Header delimeter, text start!
 
 <!DOCTYPE html>
 <html>

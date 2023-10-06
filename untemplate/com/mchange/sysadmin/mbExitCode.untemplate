@@ -1,4 +1,4 @@
-(run : TaskRunner.AbstractStep.Run.Completed)[]~()>  # Header delimeter, text start!
+(run : TaskRunner.AnyStepRunCompleted)[]~()>  # Header delimeter, text start!
 <()
   run.result.exitCode.foreach { code =>
 ()>

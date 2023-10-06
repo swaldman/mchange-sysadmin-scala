@@ -13,6 +13,10 @@ object sysadmin extends RootModule with UntemplateModule with PublishModule {
 
   override def scalaVersion = "3.3.1"
 
+//  def scalacOptions = T {
+//    super.scalacOptions() ++ Seq("-explain")
+//  }
+
   override def artifactName = "mchange-sysadmin-scala"
   override def publishVersion = T{"0.0.11-SNAPSHOT"}
   override def pomSettings    = T{
