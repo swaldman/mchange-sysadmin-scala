@@ -1,4 +1,4 @@
-package com.mchange.sysadmin
+package com.mchange.sysadmin.taskrunner
 
 import java.util.Properties
 import jakarta.mail.*

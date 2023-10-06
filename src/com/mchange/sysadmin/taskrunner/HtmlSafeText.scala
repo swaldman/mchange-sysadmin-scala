@@ -1,4 +1,4 @@
-package com.mchange.sysadmin
+package com.mchange.sysadmin.taskrunner
 
 import scala.collection.StringOps
 import org.apache.commons.text.StringEscapeUtils

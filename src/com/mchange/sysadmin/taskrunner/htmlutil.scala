@@ -1,4 +1,4 @@
-package com.mchange.sysadmin
+package com.mchange.sysadmin.taskrunner
 
 import org.jsoup.Jsoup // to verify and pretty-print HTML mail
 import org.jsoup.parser.*

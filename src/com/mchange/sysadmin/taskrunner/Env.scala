@@ -1,4 +1,4 @@
-package com.mchange.sysadmin
+package com.mchange.sysadmin.taskrunner
 
 object Env:
   val MailTo   = "SYSADMIN_MAIL_TO"

@@ -13,7 +13,7 @@
 //
 // See https://github.com/lampepfl/dotty/issues/18661
 
-package com.mchange.sysadmin
+package com.mchange.sysadmin.taskrunner
 
 import scala.collection.*
 import scala.util.control.NonFatal
