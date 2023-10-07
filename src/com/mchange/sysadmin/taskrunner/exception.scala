@@ -7,10 +7,3 @@ class MissingEnvironmentVariable( envVar : String ) extends SysadminException(s"
 
 def abortUnexpectedPriorState( message : String ) : Nothing = throw new UnexpectedPriorState(message)
 
-def extractFullStackTrace(t:Throwable) : String =
-  val sw = new java.io.StringWriter()
-  t.printStackTrace(new java.io.PrintWriter(sw))
-  sw.toString()
-
-extension (t : Throwable)
-  def fullStackTrace : String = extractFullStackTrace(t)
