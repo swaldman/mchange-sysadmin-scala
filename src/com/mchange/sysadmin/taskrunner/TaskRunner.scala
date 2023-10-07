@@ -183,7 +183,7 @@ class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
     val bestEffortFollowups =
       val lastCompleted = seqRunsReversed.collectFirst { case completed : Step.Run.Completed => completed }
       val commonCarryforward = lastCompleted.fold(task.init)(_.result.carryForward) 
-      val actions = task.bestEffortSetups.map( step => () => Step.Run.Completed(commonCarryforward, step) )
+      val actions = task.bestEffortFollowups.map( step => () => Step.Run.Completed(commonCarryforward, step) )
       parallelize.execute( Parallelizable.Followups, actions )
 
     Task.Run(task, bestEffortSetups, seqRunsReversed.reverse, bestEffortFollowups)
