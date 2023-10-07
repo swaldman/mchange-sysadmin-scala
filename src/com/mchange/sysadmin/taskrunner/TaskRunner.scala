@@ -18,51 +18,9 @@ package com.mchange.sysadmin.taskrunner
 import scala.collection.*
 import scala.util.control.NonFatal
 
-import jakarta.mail.internet.MimeMessage
-
 import com.mchange.sysadmin.*
 
-object TaskRunner:
-
-  object Reporters:
-    def stdOutOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : List[AnyTaskRun => Unit] = List(
-      ( run : AnyTaskRun ) => Console.out.println(formatter(run))
-    )
-    def stdErrOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : List[AnyTaskRun => Unit] = List(
-      ( run : AnyTaskRun ) => Console.err.println(formatter(run))
-    )
-    def smtpOnly(
-      from : String = Env.Required.mailFrom,
-      to : String = Env.Required.mailTo,
-      compose : (String, String, AnyTaskRun, Smtp.Context) => MimeMessage = Reporting.defaultCompose,
-      onlyMailFailures : Boolean = false
-    )( using context : Smtp.Context ) : List[AnyTaskRun => Unit] = List(
-      ( run : AnyTaskRun ) =>
-        if !onlyMailFailures || !run.success then
-          val msg = compose( from, to, run, context )
-          context.sendMessage(msg)
-    )
-    def smtpAndStdOut(
-      from : String = Env.Required.mailFrom,
-      to : String = Env.Required.mailTo,
-      compose : (String, String, AnyTaskRun, Smtp.Context) => MimeMessage = Reporting.defaultCompose,
-      text : AnyTaskRun => String = Reporting.defaultVerticalMessage,
-      onlyMailFailures : Boolean = false
-    )( using context : Smtp.Context ) : List[AnyTaskRun => Unit] =
-      smtpOnly(from,to,compose,onlyMailFailures) ++ stdOutOnly(text)
-
-    def default(
-      from : String = Env.Required.mailFrom,
-      to : String = Env.Required.mailTo
-    )( using context : Smtp.Context ) : List[AnyTaskRun => Unit] = smtpAndStdOut(from,to)
-
-  end Reporters
-
-end TaskRunner
-
 class TaskRunner[T]:
-  import TaskRunner.*
-
   object Carrier:
     val carryPrior : Carrier = (prior,_,_,_) => prior
   type Carrier = (T, Int, String, String) => T

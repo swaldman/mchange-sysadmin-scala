@@ -16,6 +16,8 @@ type AnyStepRun          = AnyTaskRunner#StepType#Run
 type AnyStepRunCompleted = AnyTaskRunner#StepType#RunType#Completed
 type AnyStepRunSkipped   = AnyTaskRunner#StepType#RunType#Skipped
 
+type Reporter = AnyTaskRun => Unit
+
 lazy val hostname : Option[String] =
   try
     Some(os.proc("hostname").call( check=false, stdout = os.Pipe, stderr = os.Pipe ).out.trim())
