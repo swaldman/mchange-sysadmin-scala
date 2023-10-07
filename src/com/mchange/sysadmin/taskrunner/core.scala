@@ -8,20 +8,13 @@ import java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
 import scala.util.control.NonFatal
 
-import com.mchange.sysadmin.SysadminException
-
-class UnexpectedPriorState( message : String, cause : Throwable = null ) extends SysadminException(message, cause)
-class MissingEnvironmentVariable( envVar : String ) extends SysadminException(s"Environment variable '${envVar}' is required, but missing.")
-
-def abortUnexpectedPriorState( message : String ) : Nothing = throw new UnexpectedPriorState(message)
-
-def extractFullStackTrace(t:Throwable) : String =
-  val sw = new java.io.StringWriter()
-  t.printStackTrace(new java.io.PrintWriter(sw))
-  sw.toString()
-
-extension (t : Throwable)
-  def fullStackTrace : String = extractFullStackTrace(t)
+type AnyTaskRunner       = TaskRunner[?]
+type AnyTask             = AnyTaskRunner#Task
+type AnyTaskRun          = AnyTaskRunner#TaskType#Run
+type AnyStep             = AnyTaskRunner#Step
+type AnyStepRun          = AnyTaskRunner#StepType#Run
+type AnyStepRunCompleted = AnyTaskRunner#StepType#RunType#Completed
+type AnyStepRunSkipped   = AnyTaskRunner#StepType#RunType#Skipped
 
 lazy val hostname : Option[String] =
   try

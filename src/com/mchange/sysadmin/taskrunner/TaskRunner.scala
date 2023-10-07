@@ -30,14 +30,6 @@ import com.mchange.sysadmin.Smtp
 
 object TaskRunner:
 
-  type AnyTaskRunner       = TaskRunner[?]
-  type AnyTask             = AnyTaskRunner#Task
-  type AnyTaskRun          = AnyTaskRunner#TaskType#Run
-  type AnyStep             = AnyTaskRunner#Step
-  type AnyStepRun          = AnyTaskRunner#StepType#Run
-  type AnyStepRunCompleted = AnyTaskRunner#StepType#RunType#Completed
-  type AnyStepRunSkipped   = AnyTaskRunner#StepType#RunType#Skipped
-
   object Reporters:
     def stdOutOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : List[AnyTaskRun => Unit] = List(
       ( run : AnyTaskRun ) => Console.out.println(formatter(run))

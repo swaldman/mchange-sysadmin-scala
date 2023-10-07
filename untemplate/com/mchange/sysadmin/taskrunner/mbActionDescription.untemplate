@@ -1,4 +1,4 @@
-(step : TaskRunner.AnyStep)[]~()>  # Header delimeter, text start!
+(step : AnyStep)[]~()>  # Header delimeter, text start!
 <()
   step.actionDescription.foreach { ad =>
 ()>
