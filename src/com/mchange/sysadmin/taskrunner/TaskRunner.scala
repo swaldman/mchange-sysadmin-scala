@@ -15,12 +15,16 @@
 
 package com.mchange.sysadmin.taskrunner
 
-import scala.collection.*
+import scala.collection.{immutable,mutable}
+
 import scala.util.control.NonFatal
 
 import com.mchange.sysadmin.*
 
-class TaskRunner[T]:
+object TaskRunner:
+  def apply[T]( parallelize : Parallelize ) : TaskRunner[T] = new TaskRunner[T]( parallelize )
+  def apply[T]                              : TaskRunner[T] = new TaskRunner[T]( Parallelize.Never )
+class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
   object Carrier:
     val carryPrior : Carrier = (prior,_,_,_) => prior
   type Carrier = (T, Int, String, String) => T
@@ -104,7 +108,7 @@ class TaskRunner[T]:
         def success : Boolean = step.isSuccess(this.asInstanceOf[Step.Run.Completed]) // this cast is only necessary due to our projection type workaround
       case class Skipped( step : Step ) extends Step.Run:
         val success : Boolean = false
-    object Run extends RunType	
+    object Run extends RunType  
     sealed trait Run:
       def step         : Step
       def success      : Boolean
@@ -162,7 +166,8 @@ class TaskRunner[T]:
   def silentRun(task : Task) : Task.Run =
     val bestEffortSetups =
       val init = task.init
-      task.bestEffortSetups.map( step => Step.Run.Completed(init, step) )
+      val actions = task.bestEffortSetups.map( step => () => Step.Run.Completed(init, step) )
+      parallelize.execute[Step.Run.Completed]( Parallelizable.Setups, actions )
 
     val seqRunsReversed =
       val setupOk = nonsequentialsOkay(bestEffortSetups)
@@ -178,18 +183,21 @@ class TaskRunner[T]:
     val bestEffortFollowups =
       val lastCompleted = seqRunsReversed.collectFirst { case completed : Step.Run.Completed => completed }
       val commonCarryforward = lastCompleted.fold(task.init)(_.result.carryForward) 
-      task.bestEffortSetups.map( step => Step.Run.Completed(commonCarryforward, step) )
+      val actions = task.bestEffortSetups.map( step => () => Step.Run.Completed(commonCarryforward, step) )
+      parallelize.execute( Parallelizable.Followups, actions )
 
     Task.Run(task, bestEffortSetups, seqRunsReversed.reverse, bestEffortFollowups)
   end silentRun
 
   def runAndReport(task : Task, reporters : Set[Reporter]) : Unit =
     val run = this.silentRun(task)
-    reporters.foreach: report =>
-      try
-        report(run)
-      catch
-        case NonFatal(t) => t.printStackTrace
+    val actions = reporters.map: report =>
+      () =>
+        try
+          report(run)
+        catch
+          case NonFatal(t) => t.printStackTrace
+    parallelize.execute( Parallelizable.Reporting, actions )
 
   sealed trait TaskType:
     object Run:
