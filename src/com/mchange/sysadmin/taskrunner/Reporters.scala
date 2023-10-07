@@ -5,10 +5,10 @@ import jakarta.mail.internet.MimeMessage
 import com.mchange.sysadmin.Smtp
 
 object Reporters:
-  def stdOutOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : List[Reporter] = List(
+  def stdOutOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : Set[Reporter] = Set(
     ( run : AnyTaskRun ) => Console.out.println(formatter(run))
   )
-  def stdErrOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : List[Reporter] = List(
+  def stdErrOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : Set[Reporter] = Set(
     ( run : AnyTaskRun ) => Console.err.println(formatter(run))
   )
   def smtpOnly(
@@ -16,7 +16,7 @@ object Reporters:
     to : String = Env.Required.mailTo,
     compose : (String, String, AnyTaskRun, Smtp.Context) => MimeMessage = Reporting.defaultCompose,
     onlyMailFailures : Boolean = false
-  )( using context : Smtp.Context ) : List[Reporter] = List(
+  )( using context : Smtp.Context ) : Set[Reporter] = Set(
     ( run : AnyTaskRun ) =>
       if !onlyMailFailures || !run.success then
         val msg = compose( from, to, run, context )
@@ -28,12 +28,12 @@ object Reporters:
     compose : (String, String, AnyTaskRun, Smtp.Context) => MimeMessage = Reporting.defaultCompose,
     text : AnyTaskRun => String = Reporting.defaultVerticalMessage,
     onlyMailFailures : Boolean = false
-  )( using context : Smtp.Context ) : List[Reporter] =
+  )( using context : Smtp.Context ) : Set[Reporter] =
     smtpOnly(from,to,compose,onlyMailFailures) ++ stdOutOnly(text)
 
   def default(
     from : String = Env.Required.mailFrom,
     to : String = Env.Required.mailTo
-  )( using context : Smtp.Context ) : List[Reporter] = smtpAndStdOut(from,to)
+  )( using context : Smtp.Context ) : Set[Reporter] = smtpAndStdOut(from,to)
 
 end Reporters

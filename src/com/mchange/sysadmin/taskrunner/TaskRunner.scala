@@ -183,7 +183,7 @@ class TaskRunner[T]:
     Task.Run(task, bestEffortSetups, seqRunsReversed.reverse, bestEffortFollowups)
   end silentRun
 
-  def runAndReport(task : Task, reporters : List[Task.Run => Unit]) : Unit =
+  def runAndReport(task : Task, reporters : Set[Reporter]) : Unit =
     val run = this.silentRun(task)
     reporters.foreach: report =>
       try
