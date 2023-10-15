@@ -35,7 +35,7 @@ object Smtp:
   case class Auth( user : String, password : String ) extends Authenticator:
     override def getPasswordAuthentication() : PasswordAuthentication = new PasswordAuthentication(user, password)
   object Context:
-    given Context =
+    lazy given Context =
       val props =
         sys.env.get(Env.Properties) match
           case Some( pathStr ) =>
