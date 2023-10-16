@@ -53,7 +53,7 @@ object Reporting:
           |
           |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-""".stripMargin.trim
 
-    val setups = if run.bestEffortSetups.isEmpty then (setupsSectionIfNecessary + LineSep + LineSep) else ""
+    val setups = if run.bestEffortSetups.nonEmpty then (setupsSectionIfNecessary + LineSep + LineSep) else ""
 
     val seqsection =
       s"""| SEQUENTIAL:
@@ -65,7 +65,7 @@ object Reporting:
           | BEST-EFFORT FOLLOWUPS:
           |${defaultVerticalMessageBestAttempts(run.bestEffortFollowups)}""".stripMargin.trim
 
-    val followups = if run.bestEffortFollowups.isEmpty then "" else (followupsSectionIfNecessary + LineSep + LineSep)
+    val followups = if run.bestEffortFollowups.nonEmpty then (followupsSectionIfNecessary + LineSep + LineSep) else ""
 
     val footer =
       s"""|
