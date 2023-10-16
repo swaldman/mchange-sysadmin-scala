@@ -35,7 +35,8 @@ object Smtp:
   case class Auth( user : String, password : String ) extends Authenticator:
     override def getPasswordAuthentication() : PasswordAuthentication = new PasswordAuthentication(user, password)
   object Context:
-    lazy given Context =
+    lazy given TrySmtpContext : Try[Context] = Try( Smtp.Context.Default )
+    lazy given Default : Context =
       val props =
         sys.env.get(Env.Properties) match
           case Some( pathStr ) =>
@@ -61,7 +62,7 @@ object Smtp:
       this.apply( props, sys.env )
     def apply( properties : Properties, environment : Map[String,String]) : Context =
       val propsMap = properties.asScala
-      val host = (propsMap.get(Prop.Host) orElse environment.get(Env.Host)).map(_.trim).getOrElse( throw new SysadminException("No SMTP Host Configured") )
+      val host = (propsMap.get(Prop.Host) orElse environment.get(Env.Host)).map(_.trim).getOrElse( throw new SmtpInitializationFailed("No SMTP Host Configured") )
       val mbUser = (propsMap.get(Prop.User) orElse environment.get(Env.User)).map(_.trim)
       val mbPassword = (propsMap.get(Prop.Password) orElse environment.get(Env.Password)).map(_.trim)
       val auth =
