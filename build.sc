@@ -18,7 +18,7 @@ object sysadmin extends RootModule with UntemplateModule with PublishModule {
 //  }
 
   override def artifactName = "mchange-sysadmin-scala"
-  override def publishVersion = T{"0.1.2-SNAPSHOT"}
+  override def publishVersion = T{"0.1.2"}
   override def pomSettings    = T{
     PomSettings(
       description = "A library of utilities for sysadmin scripts",
