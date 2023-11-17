@@ -18,7 +18,7 @@ object sysadmin extends RootModule with UntemplateModule with PublishModule {
 //  }
 
   override def artifactName = "mchange-sysadmin-scala"
-  override def publishVersion = T{"0.1.2"}
+  override def publishVersion = T{"0.1.3-SNAPSHOT"}
   override def pomSettings    = T{
     PomSettings(
       description = "A library of utilities for sysadmin scripts",
@@ -31,7 +31,7 @@ object sysadmin extends RootModule with UntemplateModule with PublishModule {
       )
     )
   }
-  
+
   override def ivyDeps = T{
     super.ivyDeps() ++ Agg(
       ivy"com.mchange::codegenutil:0.0.2",
