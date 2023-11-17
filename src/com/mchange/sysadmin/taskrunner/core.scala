@@ -24,6 +24,10 @@ lazy val hostname : Option[String] =
   catch
     case NonFatal(t) =>  None
 
+lazy val hostnameSimple : Option[String] = hostname.map: hn =>
+  val dot = hn.indexOf('.')
+  if dot > 0 then hn.substring(0, dot) else hn
+
 def timestamp =
   val now = Instant.now.truncatedTo( ChronoUnit.SECONDS ).atZone(ZoneId.systemDefault())
   ISO_OFFSET_DATE_TIME.format(now)

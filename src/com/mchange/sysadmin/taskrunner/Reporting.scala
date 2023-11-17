@@ -37,7 +37,7 @@ object Reporting:
     msg
 
   def defaultTitle( run : AnyTaskRun ) =
-    hostname.fold("TASK")(hn => "[" + hn + "]") + " " + (if run.success then "SUCCEEDED" else "FAILED") + ": " + run.task.name
+    hostnameSimple.fold("TASK")(hn => "[" + hn + "]") + " " + (if run.success then "SUCCEEDED" else "FAILED") + ": " + run.task.name
 
   def defaultVerticalMessage( run : AnyTaskRun ) =
     val topSection =
