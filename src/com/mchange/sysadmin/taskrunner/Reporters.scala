@@ -11,7 +11,7 @@ object Reporters:
   def stdOutOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : Set[Reporter] = Set(
     ( run : AnyTaskRun ) => Console.out.println(formatter(run))
   )
-  
+
   def stdErrOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : Set[Reporter] = Set(
     ( run : AnyTaskRun ) => Console.err.println(formatter(run))
   )
@@ -26,12 +26,12 @@ object Reporters:
       val builder = List.newBuilder[String]
       if from.isEmpty then
         builder += s"SMTP reporting disabled. No from address (usually set as environment variable '${Env.MailFrom}') has been provided."
-      if to.isEmpty then  
+      if to.isEmpty then
         builder += s"SMTP reporting disabled. No to address (usually set as environment variable '${Env.MailTo}') has been provided."
       if trySmtp.isFailure then
         builder += s"SMTP reporting disable due to exception while initializing SMTP context:\n ${trySmtp.failed.get.fullStackTrace}"
       builder.result
-    if oopsies.isEmpty then  
+    if oopsies.isEmpty then
       Right(
         ( run : AnyTaskRun ) =>
           if !onlyMailFailures || !run.success then
@@ -41,7 +41,7 @@ object Reporters:
       )
     else
       Left( oopsies )
-  
+
   def smtpOnlyOrNone(
     from : Option[String] = Env.Optional.mailFrom,
     to : Option[String] = Env.Optional.mailTo,
@@ -54,7 +54,7 @@ object Reporters:
         Set.empty
       case Right( reporter ) =>
         Set( reporter )
-  
+
   def smtpOrFail(
     from : Option[String] = Env.Optional.mailFrom,
     to : Option[String] = Env.Optional.mailTo,
