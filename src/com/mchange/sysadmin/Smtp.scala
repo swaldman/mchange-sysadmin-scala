@@ -160,6 +160,22 @@ object Smtp:
     bcc.foreach( address => msg.addRecipient(Message.RecipientType.BCC, address.toInternetAddress) )
   end setSubjectFromToCcBcc
 
+  def composeSimplePlaintext(
+    plainText : String,
+    subject   : String,
+    from      : Address,
+    to        : Seq[Address],
+    cc        : Seq[Address] = Seq.empty,
+    bcc       : Seq[Address] = Seq.empty
+  )( using context : Smtp.Context ) : MimeMessage =
+    val msg = new MimeMessage(context.session)
+    msg.setContent(plainText, "text/plain")
+    setSubjectFromToCcBcc( msg, subject, from, to, cc, bcc )
+    msg.setSentDate(new Date())
+    msg.saveChanges()
+    msg
+  end composeSimplePlaintext
+
   def sendSimplePlaintext(
     plainText : String,
     subject   : String,
@@ -168,16 +184,11 @@ object Smtp:
     cc        : Seq[Address] = Seq.empty,
     bcc       : Seq[Address] = Seq.empty
   )( using context : Smtp.Context ) : Unit =
-    val msg = new MimeMessage(context.session)
-    // last entry is highest priority!
-    msg.setContent(plainText, "text/plain")
-    setSubjectFromToCcBcc( msg, subject, from, to, cc, bcc )
-    msg.setSentDate(new Date())
-    msg.saveChanges()
+    val msg = composeSimplePlaintext( plainText, subject, from, to, cc, bcc )
     context.sendMessage(msg)
   end sendSimplePlaintext
 
-  def sendSimpleHtmlPlaintextAlternative(
+  def composeSimpleHtmlPlaintextAlternative(
     htmlText  : String,
     plainText : String,
     subject   : String,
@@ -185,7 +196,7 @@ object Smtp:
     to        : Seq[Address],
     cc        : Seq[Address] = Seq.empty,
     bcc       : Seq[Address] = Seq.empty
-  )( using context : Smtp.Context ) : Unit =
+  )( using context : Smtp.Context ) : MimeMessage =
     val msg = new MimeMessage(context.session)
     val htmlAlternative =
       val tmp = new MimeBodyPart()
@@ -201,5 +212,18 @@ object Smtp:
     setSubjectFromToCcBcc( msg, subject, from, to, cc, bcc )
     msg.setSentDate(new Date())
     msg.saveChanges()
+    msg
+  end composeSimpleHtmlPlaintextAlternative
+  
+  def sendSimpleHtmlPlaintextAlternative(
+    htmlText  : String,
+    plainText : String,
+    subject   : String,
+    from      : Address,
+    to        : Seq[Address],
+    cc        : Seq[Address] = Seq.empty,
+    bcc       : Seq[Address] = Seq.empty
+  )( using context : Smtp.Context ) : Unit =
+    val msg = composeSimpleHtmlPlaintextAlternative( htmlText, plainText, subject, from, to, bcc )
     context.sendMessage(msg)
   end sendSimpleHtmlPlaintextAlternative
