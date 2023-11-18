@@ -10,31 +10,15 @@ import jakarta.mail.internet.*
 import com.mchange.codegenutil.*
 
 import com.mchange.sysadmin.{Smtp,prettyPrintHtml}
+import com.mchange.sysadmin.Smtp.composeSimpleHtmlPlaintextAlternative
 
 object Reporting:
   def defaultCompose( from : String, to : String, run : AnyTaskRun, context : Smtp.Context ) : MimeMessage =
-    val msg = new MimeMessage(context.session)
-    //msg.setText(defaultVerticalMessage(run))
-    val htmlAlternative =
-      val tmp = new MimeBodyPart()
-      def htmlText =
-        //debugPrettyPrintHtml(task_result_html(run).text)
-        prettyPrintHtml(task_result_html(run).text)
-      tmp.setContent(htmlText, "text/html")
-      tmp
-    val plainTextAlternative =
-      val tmp = new MimeBodyPart()
-      tmp.setContent(defaultVerticalMessage(run), "text/plain")
-      tmp
-    // last entry is highest priority!
-    val multipart = new MimeMultipart("alternative", plainTextAlternative, htmlAlternative)
-    msg.setContent(multipart)
-    msg.setSubject(defaultTitle(run))
-    msg.setFrom(new InternetAddress(from))
-    msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to))
-    msg.setSentDate(new Date())
-    msg.saveChanges()
-    msg
+    val htmlText = prettyPrintHtml(task_result_html(run).text) //debugPrettyPrintHtml(task_result_html(run).text)
+    val plainText = defaultVerticalMessage(run)
+    val subject = defaultTitle(run)
+    given ctx : Smtp.Context = context
+    composeSimpleHtmlPlaintextAlternative(htmlText, plainText, subject, from, to)
 
   def defaultTitle( run : AnyTaskRun ) =
     hostnameSimple.fold("TASK")(hn => "[" + hn + "]") + " " + (if run.success then "SUCCEEDED" else "FAILED") + ": " + run.task.name

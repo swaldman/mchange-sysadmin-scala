@@ -1,12 +1,10 @@
 package com.mchange.sysadmin
 
-import java.util.Date
-import java.util.Properties
+import java.util.{Date,Properties}
 import jakarta.mail.*
 import jakarta.mail.internet.*
 import jakarta.mail.{Authenticator, PasswordAuthentication, Session, Transport}
 import java.io.BufferedInputStream
-import java.util.Properties
 import scala.util.{Try,Failure,Success,Using}
 import scala.jdk.CollectionConverters.*
 import scala.io.Codec
@@ -145,57 +143,130 @@ object Smtp:
     def sendMessage( msg : MimeMessage ) =
       this.auth.fold(sendUnauthenticated(msg))(auth => sendAuthenticated(msg,auth))
   end Context
-  private def setSubjectFromToCcBcc(
+  object AddressesRep:
+    given AddressesRep[String] with
+      def toAddresses( src : String ) : Seq[Address] = if src.isEmpty then Seq.empty else Address.parseCommaSeparated(src)
+    given AddressesRep[Address] with
+      def toAddresses( src : Address ) : Seq[Address] = Seq(src)
+    given AddressesRep[Seq[Address]] with
+      def toAddresses( src : Seq[Address] ) : Seq[Address] = src
+    given AddressesRepSeqString : AddressesRep[Seq[String]] with // if left anonymous, generated name conflicted with Seq[Address] instance
+      def toAddresses( src : Seq[String] ) : Seq[Address] = src.flatMap( Address.parseCommaSeparated )
+  trait AddressesRep[A]:
+    def toAddresses( src : A ) : Seq[Address]
+  end AddressesRep
+  
+  private def setSubjectFromToCcBccReplyTo(
     msg     : MimeMessage,
     subject : String,
-    from    : Address,
+    from    : Seq[Address],
     to      : Seq[Address],
-    cc      : Seq[Address] = Seq.empty,
-    bcc     : Seq[Address] = Seq.empty
+    cc      : Seq[Address],
+    bcc     : Seq[Address],
+    replyTo : Seq[Address]
   )( using context : Smtp.Context ) : Unit =
     msg.setSubject(subject)
-    msg.setFrom(from.toInternetAddress)
+    if from.nonEmpty then
+      msg.addFrom( from.map( _.toInternetAddress ).toArray )
     to.foreach( address => msg.addRecipient(Message.RecipientType.TO, address.toInternetAddress) )
     cc.foreach( address => msg.addRecipient(Message.RecipientType.CC, address.toInternetAddress) )
     bcc.foreach( address => msg.addRecipient(Message.RecipientType.BCC, address.toInternetAddress) )
-  end setSubjectFromToCcBcc
+    if replyTo.nonEmpty then
+      msg.setReplyTo( replyTo.map( _.toInternetAddress ).toArray )
+  end setSubjectFromToCcBccReplyTo
 
-  def composeSimplePlaintext(
+  /**
+    * Does not set `msg.setSentDate(...)`.
+    * Be sure to do so, and then `msg.saveChanges()` before sending!
+    */
+  def _composeSimplePlaintext(
     plainText : String,
     subject   : String,
-    from      : Address,
+    from      : Seq[Address],
     to        : Seq[Address],
-    cc        : Seq[Address] = Seq.empty,
-    bcc       : Seq[Address] = Seq.empty
+    cc        : Seq[Address],
+    bcc       : Seq[Address],
+    replyTo   : Seq[Address],
   )( using context : Smtp.Context ) : MimeMessage =
     val msg = new MimeMessage(context.session)
     msg.setContent(plainText, "text/plain")
-    setSubjectFromToCcBcc( msg, subject, from, to, cc, bcc )
-    msg.setSentDate(new Date())
+    setSubjectFromToCcBccReplyTo( msg, subject, from, to, cc, bcc, replyTo )
     msg.saveChanges()
     msg
-  end composeSimplePlaintext
+  end _composeSimplePlaintext
 
-  def sendSimplePlaintext(
+  /**
+    * Does not set `msg.setSentDate(...)`.
+    * Be sure to do so, and then `msg.saveChanges()` before sending!
+    */
+  def composeSimplePlaintext[A:AddressesRep,B:AddressesRep,C:AddressesRep,D:AddressesRep,E:AddressesRep](
     plainText : String,
     subject   : String,
-    from      : Address,
+    from      : A,
+    to        : B,
+    cc        : C = Seq.empty[Address],
+    bcc       : D = Seq.empty[Address],
+    replyTo   : E = Seq.empty[Address]
+  )( using context : Smtp.Context ) : MimeMessage =
+    _composeSimplePlaintext(
+      plainText,
+      subject,
+      summon[AddressesRep[A]].toAddresses(from),
+      summon[AddressesRep[B]].toAddresses(to),
+      summon[AddressesRep[C]].toAddresses(cc),
+      summon[AddressesRep[D]].toAddresses(bcc),
+      summon[AddressesRep[E]].toAddresses(replyTo),
+    )
+  end composeSimplePlaintext
+
+  def _sendSimplePlaintext(
+    plainText : String,
+    subject   : String,
+    from      : Seq[Address],
     to        : Seq[Address],
-    cc        : Seq[Address] = Seq.empty,
-    bcc       : Seq[Address] = Seq.empty
+    cc        : Seq[Address],
+    bcc       : Seq[Address],
+    replyTo   : Seq[Address]
   )( using context : Smtp.Context ) : Unit =
-    val msg = composeSimplePlaintext( plainText, subject, from, to, cc, bcc )
+    val msg = _composeSimplePlaintext( plainText, subject, from, to, cc, bcc, replyTo )
+    msg.setSentDate(new Date())
+    msg.saveChanges()
     context.sendMessage(msg)
+  end _sendSimplePlaintext
+
+  def sendSimplePlaintext[A:AddressesRep,B:AddressesRep,C:AddressesRep,D:AddressesRep,E:AddressesRep](
+    plainText : String,
+    subject   : String,
+    from      : A,
+    to        : B,
+    cc        : C = Seq.empty[Address],
+    bcc       : D = Seq.empty[Address],
+    replyTo   : E = Seq.empty[Address]
+  )( using context : Smtp.Context ) : Unit =
+    _sendSimplePlaintext(
+      plainText,
+      subject,
+      summon[AddressesRep[A]].toAddresses(from),
+      summon[AddressesRep[B]].toAddresses(to),
+      summon[AddressesRep[C]].toAddresses(cc),
+      summon[AddressesRep[D]].toAddresses(bcc),
+      summon[AddressesRep[E]].toAddresses(replyTo)
+    )
   end sendSimplePlaintext
 
-  def composeSimpleHtmlPlaintextAlternative(
+  /**
+    * Does not set `msg.setSentDate(...)`.
+    * Be sure to do so, and then `msg.saveChanges()` before sending!
+    */
+  def _composeSimpleHtmlPlaintextAlternative(
     htmlText  : String,
     plainText : String,
     subject   : String,
-    from      : Address,
+    from      : Seq[Address],
     to        : Seq[Address],
-    cc        : Seq[Address] = Seq.empty,
-    bcc       : Seq[Address] = Seq.empty
+    cc        : Seq[Address],
+    bcc       : Seq[Address],
+    replyTo   : Seq[Address]
   )( using context : Smtp.Context ) : MimeMessage =
     val msg = new MimeMessage(context.session)
     val htmlAlternative =
@@ -209,21 +280,71 @@ object Smtp:
     // last entry is highest priority!
     val multipart = new MimeMultipart("alternative", plainTextAlternative, htmlAlternative)
     msg.setContent(multipart)
-    setSubjectFromToCcBcc( msg, subject, from, to, cc, bcc )
-    msg.setSentDate(new Date())
+    setSubjectFromToCcBccReplyTo( msg, subject, from, to, cc, bcc, replyTo )
     msg.saveChanges()
     msg
-  end composeSimpleHtmlPlaintextAlternative
-  
-  def sendSimpleHtmlPlaintextAlternative(
+  end _composeSimpleHtmlPlaintextAlternative
+
+  /**
+    * Does not set `msg.setSentDate(...)`.
+    * Be sure to do so, and then `msg.saveChanges()` before sending!
+    */
+  def composeSimpleHtmlPlaintextAlternative[A:AddressesRep,B:AddressesRep,C:AddressesRep,D:AddressesRep,E:AddressesRep](
     htmlText  : String,
     plainText : String,
     subject   : String,
-    from      : Address,
+    from      : A,
+    to        : B,
+    cc        : C = Seq.empty[Address],
+    bcc       : D = Seq.empty[Address],
+    replyTo   : E = Seq.empty[Address]
+  )( using context : Smtp.Context ) : MimeMessage =
+    _composeSimpleHtmlPlaintextAlternative(
+      htmlText,
+      plainText,
+      subject,
+      summon[AddressesRep[A]].toAddresses(from),
+      summon[AddressesRep[B]].toAddresses(to),
+      summon[AddressesRep[C]].toAddresses(cc),
+      summon[AddressesRep[D]].toAddresses(bcc),
+      summon[AddressesRep[E]].toAddresses(replyTo)
+    )
+  end composeSimpleHtmlPlaintextAlternative 
+
+  def _sendSimpleHtmlPlaintextAlternative(
+    htmlText  : String,
+    plainText : String,
+    subject   : String,
+    from      : Seq[Address],
     to        : Seq[Address],
-    cc        : Seq[Address] = Seq.empty,
-    bcc       : Seq[Address] = Seq.empty
+    cc        : Seq[Address],
+    bcc       : Seq[Address],
+    replyTo   : Seq[Address],
   )( using context : Smtp.Context ) : Unit =
-    val msg = composeSimpleHtmlPlaintextAlternative( htmlText, plainText, subject, from, to, bcc )
+    val msg = _composeSimpleHtmlPlaintextAlternative( htmlText, plainText, subject, from, to, cc, bcc, replyTo )
+    msg.setSentDate(new Date())
+    msg.saveChanges()
     context.sendMessage(msg)
-  end sendSimpleHtmlPlaintextAlternative
+  end _sendSimpleHtmlPlaintextAlternative
+
+  def sendSimpleHtmlPlaintextAlternative[A:AddressesRep,B:AddressesRep,C:AddressesRep,D:AddressesRep,E:AddressesRep](
+    htmlText  : String,
+    plainText : String,
+    subject   : String,
+    from      : A,
+    to        : B,
+    cc        : C = Seq.empty[Address],
+    bcc       : D = Seq.empty[Address],
+    replyTo   : E = Seq.empty[Address]
+  )( using context : Smtp.Context ) : Unit =
+    _sendSimpleHtmlPlaintextAlternative(
+      htmlText,
+      plainText,
+      subject,
+      summon[AddressesRep[A]].toAddresses(from),
+      summon[AddressesRep[B]].toAddresses(to),
+      summon[AddressesRep[C]].toAddresses(cc),
+      summon[AddressesRep[D]].toAddresses(bcc),
+      summon[AddressesRep[E]].toAddresses(replyTo)
+    )
+  end sendSimpleHtmlPlaintextAlternative 

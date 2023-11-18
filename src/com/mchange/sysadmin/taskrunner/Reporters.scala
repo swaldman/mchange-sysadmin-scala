@@ -1,5 +1,6 @@
 package com.mchange.sysadmin.taskrunner
 
+import java.util.Date
 import scala.util.{Failure,Success,Try}
 import scala.util.control.NonFatal
 import jakarta.mail.internet.MimeMessage
@@ -37,6 +38,8 @@ object Reporters:
           if !onlyMailFailures || !run.success then
             val context = trySmtp.get
             val msg = compose( from.get, to.get, run, context )
+            msg.setSentDate(new Date())
+            msg.saveChanges()
             context.sendMessage(msg)
       )
     else
