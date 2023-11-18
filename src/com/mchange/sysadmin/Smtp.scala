@@ -1,5 +1,6 @@
 package com.mchange.sysadmin
 
+import java.util.Date
 import java.util.Properties
 import jakarta.mail.*
 import jakarta.mail.internet.*
@@ -8,6 +9,7 @@ import java.io.BufferedInputStream
 import java.util.Properties
 import scala.util.{Try,Failure,Success,Using}
 import scala.jdk.CollectionConverters.*
+import scala.io.Codec
 
 object Smtp:
   object Env:
@@ -32,6 +34,8 @@ object Smtp:
     val Vanilla     = 25
     val ImplicitTls = 465
     val StartTls    = 587
+  case class Address( email : String, displayName : Option[String] = None, codec : Codec = Codec.UTF8):
+    def toInternetAddress = new InternetAddress( email, displayName.getOrElse(null), codec.charSet.name() )
   case class Auth( user : String, password : String ) extends Authenticator:
     override def getPasswordAuthentication() : PasswordAuthentication = new PasswordAuthentication(user, password)
   object Context:
@@ -131,3 +135,63 @@ object Smtp:
 
     def sendMessage( msg : MimeMessage ) =
       this.auth.fold(sendUnauthenticated(msg))(auth => sendAuthenticated(msg,auth))
+  end Context
+
+  private def setSubjectFromToCcBcc(
+    msg     : MimeMessage,
+    subject : String,
+    from    : Address,
+    to      : Seq[Address],
+    cc      : Seq[Address] = Seq.empty,
+    bcc     : Seq[Address] = Seq.empty
+  )( using context : Smtp.Context ) : Unit =
+    msg.setSubject(subject)
+    msg.setFrom(from.toInternetAddress)
+    to.foreach( address => msg.addRecipient(Message.RecipientType.TO, address.toInternetAddress) )
+    cc.foreach( address => msg.addRecipient(Message.RecipientType.CC, address.toInternetAddress) )
+    bcc.foreach( address => msg.addRecipient(Message.RecipientType.BCC, address.toInternetAddress) )
+  end setSubjectFromToCcBcc
+
+  def sendSimplePlaintext(
+    plainText : String,
+    subject   : String,
+    from      : Address,
+    to        : Seq[Address],
+    cc        : Seq[Address] = Seq.empty,
+    bcc       : Seq[Address] = Seq.empty
+  )( using context : Smtp.Context ) : Unit =
+    val msg = new MimeMessage(context.session)
+    // last entry is highest priority!
+    msg.setContent(plainText, "text/plain")
+    setSubjectFromToCcBcc( msg, subject, from, to, cc, bcc )
+    msg.setSentDate(new Date())
+    msg.saveChanges()
+    context.sendMessage(msg)
+  end sendSimplePlaintext
+
+  def sendSimpleHtmlPlaintextAlternative(
+    htmlText  : String,
+    plainText : String,
+    subject   : String,
+    from      : Address,
+    to        : Seq[Address],
+    cc        : Seq[Address] = Seq.empty,
+    bcc       : Seq[Address] = Seq.empty
+  )( using context : Smtp.Context ) : Unit =
+    val msg = new MimeMessage(context.session)
+    val htmlAlternative =
+      val tmp = new MimeBodyPart()
+      tmp.setContent(htmlText, "text/html")
+      tmp
+    val plainTextAlternative =
+      val tmp = new MimeBodyPart()
+      tmp.setContent(plainText, "text/plain")
+      tmp
+    // last entry is highest priority!
+    val multipart = new MimeMultipart("alternative", plainTextAlternative, htmlAlternative)
+    msg.setContent(multipart)
+    setSubjectFromToCcBcc( msg, subject, from, to, cc, bcc )
+    msg.setSentDate(new Date())
+    msg.saveChanges()
+    context.sendMessage(msg)
+  end sendSimpleHtmlPlaintextAlternative
