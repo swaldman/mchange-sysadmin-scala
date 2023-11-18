@@ -34,6 +34,15 @@ object Smtp:
     val Vanilla     = 25
     val ImplicitTls = 465
     val StartTls    = 587
+  object Address:
+    def fromInternetAddress( iaddress : InternetAddress ) : Address = Address( iaddress.getAddress(), Option(iaddress.getPersonal()) )
+    def parseCommaSeparated( line : String ) = InternetAddress.parse(line).map( fromInternetAddress )
+    def parseSingle( fullAddress : String ) : Address =
+      val out = parseCommaSeparated( fullAddress )
+      out.size match
+        case 0 => throw new SmtpAddressParseFailed("Expected to parse one valid SMTP address, none found.")
+        case 1 => out.head
+        case n => throw new SmtpAddressParseFailed(s"Expected to parse one valid SMTP address, ${n} found.")
   case class Address( email : String, displayName : Option[String] = None, codec : Codec = Codec.UTF8):
     def toInternetAddress = new InternetAddress( email, displayName.getOrElse(null), codec.charSet.name() )
   case class Auth( user : String, password : String ) extends Authenticator:
@@ -136,7 +145,6 @@ object Smtp:
     def sendMessage( msg : MimeMessage ) =
       this.auth.fold(sendUnauthenticated(msg))(auth => sendAuthenticated(msg,auth))
   end Context
-
   private def setSubjectFromToCcBcc(
     msg     : MimeMessage,
     subject : String,
