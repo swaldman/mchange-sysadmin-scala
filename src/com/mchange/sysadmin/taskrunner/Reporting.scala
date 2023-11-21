@@ -9,8 +9,9 @@ import jakarta.mail.internet.*
 
 import com.mchange.codegenutil.*
 
-import com.mchange.sysadmin.{Smtp,prettyPrintHtml}
-import com.mchange.sysadmin.Smtp.composeSimpleHtmlPlaintextAlternative
+import com.mchange.sysadmin.prettyPrintHtml
+import com.mchange.mailutil.Smtp
+import Smtp.composeSimpleHtmlPlaintextAlternative
 
 object Reporting:
   def defaultCompose( from : String, to : String, run : AnyTaskRun, context : Smtp.Context ) : MimeMessage =

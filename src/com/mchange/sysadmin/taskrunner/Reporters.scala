@@ -5,8 +5,8 @@ import scala.util.{Failure,Success,Try}
 import scala.util.control.NonFatal
 import jakarta.mail.internet.MimeMessage
 
-import com.mchange.sysadmin.{Smtp, fullStackTrace}
-
+import com.mchange.conveniences.throwable.*
+import com.mchange.mailutil.Smtp
 object Reporters:
 
   def stdOutOnly(formatter : AnyTaskRun => String = Reporting.defaultVerticalMessage) : Set[Reporter] = Set(

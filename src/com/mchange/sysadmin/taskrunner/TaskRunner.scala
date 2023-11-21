@@ -20,6 +20,8 @@ import scala.collection.{immutable,mutable}
 import scala.util.control.NonFatal
 
 import com.mchange.sysadmin.*
+import com.mchange.conveniences
+import conveniences.throwable.*
 
 object TaskRunner:
   def apply[T]( parallelize : Parallelize ) : TaskRunner[T] = new TaskRunner[T]( parallelize )
