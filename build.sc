@@ -35,8 +35,8 @@ object sysadmin extends RootModule with UntemplateModule with PublishModule {
   override def ivyDeps = T{
     super.ivyDeps() ++ Agg(
       ivy"com.mchange::codegenutil:0.0.2",
-      ivy"com.mchange::mailutil:0.0.1-SNAPSHOT",
-      ivy"com.mchange::conveniences:0.0.1-SNAPSHOT",
+      ivy"com.mchange::mailutil:0.0.1",
+      ivy"com.mchange::conveniences:0.0.1",
       ivy"com.lihaoyi::os-lib:0.9.1",
       ivy"com.lihaoyi::pprint:0.8.1",
       ivy"org.apache.commons:commons-text:1.10.0",
