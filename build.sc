@@ -11,7 +11,7 @@ object sysadmin extends RootModule with UntemplateModule with PublishModule {
 
   val JakartaMailVersion = "2.0.1"
 
-  override def scalaVersion = "3.3.1"
+  override def scalaVersion = "3.3.3"
 
 //  def scalacOptions = T {
 //    super.scalacOptions() ++ Seq("-explain")
@@ -37,7 +37,7 @@ object sysadmin extends RootModule with UntemplateModule with PublishModule {
       ivy"com.mchange::codegenutil:0.0.2",
       ivy"com.mchange::mailutil:0.0.1",
       ivy"com.mchange::conveniences:0.0.1",
-      ivy"com.lihaoyi::os-lib:0.9.1",
+      ivy"com.lihaoyi::os-lib:0.9.2",
       ivy"com.lihaoyi::pprint:0.8.1",
       ivy"org.apache.commons:commons-text:1.10.0",
       ivy"org.jsoup:jsoup:1.16.1", // just to pretty-print HTML for now
