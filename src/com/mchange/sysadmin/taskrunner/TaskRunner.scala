@@ -100,7 +100,10 @@ class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
               step match
                 case exec : Step.Exec =>
                   val tmp = os.proc(exec.parsedCommand).call( cwd = exec.workingDirectory, env = exec.environment, check = false, stdin = os.Pipe, stdout = os.Pipe, stderr = os.Pipe )
-                  Step.Result( Some(tmp.exitCode), tmp.out.trim(), tmp.err.trim(), prior )
+                  val exitCode = tmp.exitCode
+                  val out = tmp.out.trim()
+                  val err = tmp.err.trim()
+                  Step.Result( Some(exitCode), out, err, exec.carrier(prior,exitCode,out,err) )
                 case arbitrary : Step.Arbitrary =>
                   arbitrary.action( prior, arbitrary )
             catch
