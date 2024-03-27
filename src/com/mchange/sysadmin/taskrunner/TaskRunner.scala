@@ -113,11 +113,11 @@ class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
         def success : Boolean = step.isSuccess(this.asInstanceOf[Step.Run.Completed]) // this cast is only necessary due to our projection type workaround
       case class Skipped( step : Step ) extends Step.Run:
         val success : Boolean = false
-    object Run extends RunType  
+    object Run extends RunType
     sealed trait Run:
       def step         : Step
       def success      : Boolean
-  object Step extends StepType    
+  object Step extends StepType
   sealed trait Step:
     def name              : String
     def environment       : Map[String,String]
@@ -130,7 +130,7 @@ class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
   def arbitrary(
     name : String,
     action : (T, Step.Arbitrary) => Step.Result,
-    isSuccess : Step.Run.Completed => Boolean = Step.stepErrIsEmpty,
+    isSuccess : Step.Run.Completed => Boolean = Step.defaultIsSuccess,
     workingDirectory : os.Path = os.pwd,
     environment : immutable.Map[String,String] = sys.env,
     actionDescription : Option[String] = None
