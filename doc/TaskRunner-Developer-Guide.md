@@ -14,6 +14,7 @@
 10. [Advanced Features](#advanced-features)
 11. [Best Practices](#best-practices)
 12. [API Reference](#api-reference)
+13. [FAQs](#faqs)
 
 ---
 
@@ -115,14 +116,12 @@ libraryDependencies += "com.mchange" %% "mchange-sysadmin-scala" % "0.2.0-SNAPSH
 
 ```scala
 import com.mchange.sysadmin.taskrunner.*
-import scala.util.Try
-import com.mchange.mailutil.Smtp
 
 // Create a TaskRunner parameterized with Unit (no state tracking)
 val taskRunner = TaskRunner[Unit]
 
 // Import the DSL
-import taskRunner.{Task, Step}
+import taskRunner.*
 
 // Define a simple task
 val myTask = new Task:
@@ -140,7 +139,7 @@ val myTask = new Task:
 
 // Run with stdout reporter
 val reporters = Reporters.stdOutOnly()
-taskRunner.runAndReport(myTask, reporters)
+runAndReport(myTask, reporters)
 ```
 
 ---
@@ -155,7 +154,7 @@ The simplest approach when you don't need to track state:
 
 ```scala
 val taskRunner = TaskRunner[Unit]
-import taskRunner.{Task, Step}
+import taskRunner.*
 
 val task = new Task:
   def init = ()
@@ -175,7 +174,7 @@ case class BackupState(
 )
 
 val taskRunner = TaskRunner[BackupState]
-import taskRunner.{Task, Step}
+import taskRunner.*
 
 val task = new Task:
   def init = BackupState()
@@ -365,7 +364,7 @@ You need to supply a `Carrier`, a function that determines what new state will a
 ```scala
 Step.Arbitrary("Complex operation"): (state, self) =>
   // Run a command and extract its output
-  taskRunner.arbitraryExec(
+  arbitraryExec(
     state,
     self,
     os.proc("some", "command"),
@@ -794,7 +793,7 @@ Step.Exec(
 Override the default task success criterion:
 
 ```scala
-val run = taskRunner.silentRun(myTask)
+val run = silentRun(myTask)
 
 // Default uses Task.Run.usualSuccessCriterion
 // Create custom criteria:
@@ -811,7 +810,7 @@ val customRun = run.copy(
 Get task run results without reporting:
 
 ```scala
-val run: Task.Run = taskRunner.silentRun(myTask)
+val run: Task.Run = silentRun(myTask)
 
 if run.success then
   println("Task succeeded!")
@@ -936,7 +935,7 @@ Good step names help when reading reports:
 During development, use `silentRun` to test without sending emails:
 
 ```scala
-val run = taskRunner.silentRun(myTask)
+val run = silentRun(myTask)
 println(s"Success: ${run.success}")
 run.sequential.foreach:
   case completed: AnyStepRunCompleted =>
@@ -1161,7 +1160,7 @@ type Reporter = AnyTaskRun => Unit
 - Verify `essential` flags are set correctly
 - Use `silentRun` to inspect which step failed:
   ```scala
-  val run = taskRunner.silentRun(myTask)
+  val run = silentRun(myTask)
   run.sequential.zipWithIndex.foreach { case (stepRun, i) =>
     println(s"$i: ${stepRun.step.name} - ${stepRun.success}")
   }
@@ -1186,6 +1185,80 @@ type Reporter = AnyTaskRun => Unit
 
 ---
 
+## FAQs
+
+**1. Why do I have to `import taskRunner.*` after I create a `TaskRunner` instance?**
+
+You can't just create a `TaskRunner.Step`, because it is a _dependent type_. Each _instance_ of `TaskRunner` has its own `Step` type, 
+which cannot substitute or be substituted for by any other instance's `Step`. 
+
+This adds some complexity. If we write
+
+```scala
+import com.mchange.sysadmin.taskrunner.*
+
+// Create a TaskRunner parameterized with Unit (no state tracking)
+val taskRunner = TaskRunner[Unit]
+
+val myStep = Step.Exec("Run Twingle Script",List("twingle"))
+```
+
+The call to `Step.Exec` would fail. It would need to be
+
+```scala
+val myStep = taskRunner.Step.Exec("Run Twingle Script",List("twingle"))
+```
+
+which is longwinded.
+
+A more concise, and recommended, approach is to just write `import taskRunner.*`
+
+You should not be working with multiple `TaskRunner` instances in any single context,
+and this gives you access to the full API without ceremony.
+
+**2. Why does the library rely on dependent types?**
+
+Dependent types add extra complexity to the library. 
+
+Early version of the library just had top-level,
+independent types including `Step`, `Step.Result`, `Step.Run`, `Step.Completed`, etc. 
+
+But because all of these elements need to adhere to a common but parameterized type for
+the carry forward state, everything had to be written in terms of 
+`Step[T]`, `Step.Result[T]`, `Step.Run[T]`, `Step.Completed[T]` etc.
+
+This got noisy and, seemed inconvenient to work with.
+
+The current, cleaner and simpler, API seemed woth accepting the oddness and complexity of dependent types.
+`import taskRunner.*` is not that big a deal.
+
+**3. Why do `Result` objects not include an `Option[Throwable]`, signalling that an `Exception` has occurred?**
+
+A `Task` was conceived as kind of a structured, instrumented shell script. The library began with `Step.Exec`,
+which literally just runs something and looks to the exit code for success or failure.
+
+The library was then generalized to include `Step.Arbitrary(...)`, which just executes some Scala task, and which
+has no natural integral "exit code" to signal success or failure.
+
+But a Scala task also has no natural "standard error" output that must be captured. Nothing ever needs to be
+written into that element of the result.
+
+So rather than complicate `Result` objects, it seemed parsimonious to just let notional output to standard
+error signify that something has gone awry in most cases. (You can define your own `isSuccess` function,
+and override this. But it's rare that you would have to for a `Step.Arbitrary`.)
+
+For now, an unhandled `Exception` just gets its stack trace written as "standard out", which by default gets interpreted
+as failure, and the prior state is carried forward. 
+
+In the future, there could be a user-defined function, perhaps `(T, Throwable) => T` or even `(T, Result) => Result`
+to override this behavior, and customize how different exceptions are interpreted or affect execution.
+But so far, we've never encountered a need for it.
+
+
+---
+
 **Version**: 0.2.0-SNAPSHOT
+
 **Last Updated**: 2024-11-07
+
 **License**: Apache 2.0
