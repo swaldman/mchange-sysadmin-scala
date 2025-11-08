@@ -50,7 +50,7 @@ object `package` extends UntemplateModule with PublishModule:
     // to customize, examine key and modify the customer
     // with out = out.copy=...
     //
-    // e.g. out = out.copy(extraImports=Seq("commchangesysadmin.*"))
+    // e.g. out = out.copy(extraImports=Seq("com.mchange.sysadmin.*"))
 
     out
   */
