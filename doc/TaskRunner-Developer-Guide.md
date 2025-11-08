@@ -85,7 +85,7 @@ By default:
 You can override this by setting the `essential` field on any step:
 - `essential = Some(true)` - Failure causes overall task failure
 - `essential = Some(false)` - Failure doesn't affect overall task success
-- `essential = None` - Use default behavior (sequential=true, best-effort=false)
+- `essential = None` - Use default behavior (sequentials are essential, best-effort setups and followups are not)
 
 ### Success Criteria
 
