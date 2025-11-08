@@ -1213,6 +1213,17 @@ which is longwinded.
 
 A more concise, and recommended, approach is to just write `import taskRunner.*`
 
+```scala
+import com.mchange.sysadmin.taskrunner.*
+
+// Create a TaskRunner parameterized with Unit (no state tracking)
+val taskRunner = TaskRunner[Unit]
+import taskRunner.*
+
+val myStep = Step.Exec("Run Twingle Script",List("twingle"))
+```
+
+
 You should not be working with multiple `TaskRunner` instances in any single context,
 and this gives you access to the full API without ceremony.
 
