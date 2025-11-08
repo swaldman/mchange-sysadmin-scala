@@ -1268,8 +1268,6 @@ But so far, we've never encountered a need for it.
 
 ---
 
-**Version**: 0.2.0-SNAPSHOT
-
-**Last Updated**: 2024-11-07
-
-**License**: Apache 2.0
+**Version**: 0.2.0-SNAPSHOT<br>
+**Last Updated**: 2024-11-07<br>
+**License**: Apache 2.0<br>
