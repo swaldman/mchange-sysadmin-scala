@@ -142,6 +142,32 @@ val reporters = Reporters.stdOutOnly()
 runAndReport(myTask, reporters)
 ```
 
+This yields a report like
+
+```plaintext
+=====================================================================
+ [democracy] SUCCEEDED: Hello World Task
+=====================================================================
+ Timestamp: 2025-11-08T17:21:11-05:00
+ Succeeded overall? Yes
+
+SEQUENTIAL:
+---------------------------------------------------------------------
+ 1. Say Hello
+---------------------------------------------------------------------
+ Parsed command: List(echo, Hello, World!)
+ Succeeded? Yes 
+ Exit code: 0
+
+ out:
+     Hello, World!
+
+ err:
+     <empty>
+
+=====================================================================
+```
+
 ---
 
 ## Carryforward: State Management
