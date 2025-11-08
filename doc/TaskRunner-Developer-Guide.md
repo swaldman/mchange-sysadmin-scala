@@ -297,7 +297,7 @@ Step.Arbitrary(
   isSuccess = Step.defaultIsSuccess,     // optional
   workingDirectory = os.pwd,             // optional
   environment = sys.env,                 // optional
-  actionDescription = Some("Details"),   // optional, appears in reports
+  actionDescription = None,              // optional, appears in reports
   essential = None                       // optional
 ): (state, self) =>
   // Your custom logic here
