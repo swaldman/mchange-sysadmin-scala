@@ -12,9 +12,8 @@
 8. [Parallelization](#parallelization)
 9. [Environment Configuration](#environment-configuration)
 10. [Advanced Features](#advanced-features)
-11. [Complete Examples](#complete-examples)
-12. [Best Practices](#best-practices)
-13. [API Reference](#api-reference)
+11. [Best Practices](#best-practices)
+12. [API Reference](#api-reference)
 
 ---
 
@@ -227,8 +226,8 @@ Step.Exec(
   parsedCommand = List("ls", "-la", "/tmp"),
   workingDirectory = os.pwd,              // optional, defaults to os.pwd
   environment = sys.env,                  // optional, defaults to sys.env
-  carrier = Carrier.carryPrior,          // optional, defaults to Carrier.carryPrior
-  isSuccess = Step.exitCodeIsZero,       // optional, defaults to exitCodeIsZero
+  carrier = Carrier.carryPrior,           // optional, defaults to Carrier.carryPrior
+  isSuccess = Step.exitCodeIsZero,        // optional, defaults to exitCodeIsZero
   essential = None                        // optional, defaults based on step category
 )
 ```
@@ -679,24 +678,13 @@ When using parallelization:
 
 ### Email Configuration
 
-TaskRunner expects environment variables for email reporting:
+If you'd like e-mail reporting, TaskRunner expects an `Smtp.Context` to be available (see [below](#smtp_context)) as well as the following environment variables:
 
 ```bash
 export SYSADMIN_MAIL_FROM=admin@example.com
 export SYSADMIN_MAIL_TO=alerts@example.com
 ```
 
-Access in code:
-
-```scala
-// Optional (returns Option[String])
-Env.Optional.mailFrom  // Some("admin@example.com") or None
-Env.Optional.mailTo    // Some("alerts@example.com") or None
-
-// Required (throws MissingEnvironmentVariable if not set)
-Env.Required.mailFrom  // "admin@example.com" or throws
-Env.Required.mailTo    // "alerts@example.com" or throws
-```
 
 ### SMTP Context
 
@@ -836,270 +824,6 @@ run.sequential.foreach {
 
 ---
 
-## Complete Examples
-
-### Example 1: Simple File Cleanup
-
-```scala
-import com.mchange.sysadmin.taskrunner.*
-
-val taskRunner = TaskRunner[Unit]
-import taskRunner.{Task, Step}
-
-val cleanupTask = new Task:
-  def name = "Cleanup Temporary Files"
-
-  def init = ()
-
-  def bestEffortSetups = Set.empty
-
-  def sequential = List(
-    Step.Exec("Remove old logs",
-      List("find", "/var/log/myapp", "-name", "*.log", "-mtime", "+30", "-delete")
-    ),
-    Step.Exec("Remove old cache files",
-      List("find", "/tmp/cache", "-mtime", "+7", "-delete")
-    )
-  )
-
-  def bestEffortFollowups = Set(
-    Step.Exec("Log cleanup completion",
-      List("logger", "Cleanup task completed")
-    )
-  )
-
-val reporters: Set[Reporter] = Reporters.stdOutOnly()
-taskRunner.runAndReport(cleanupTask, reporters)
-```
-
-### Example 2: Database Backup with State Tracking
-
-```scala
-import com.mchange.sysadmin.taskrunner.*
-import scala.util.Try
-import com.mchange.mailutil.Smtp
-
-case class BackupState(
-  tmpDir: Option[os.Path] = None,
-  backupFile: Option[os.Path] = None,
-  backupSize: Long = 0,
-  uploadPath: String = ""
-)
-
-val taskRunner = TaskRunner[BackupState]
-import taskRunner.{Task, Step}
-
-val backupTask = new Task:
-  def name = "Database Backup"
-
-  def init = BackupState()
-
-  def bestEffortSetups = Set(
-    Step.Exec("Check rclone availability",
-      List("rclone", "--version")
-    )
-  )
-
-  def sequential = List(
-    Step.Arbitrary("Create temp directory"): (state, self) =>
-      val tmpDir = os.temp.dir()
-      Step.Result.onward(state.copy(tmpDir = Some(tmpDir)))
-    ,
-
-    Step.Arbitrary("Perform database backup"): (state, self) =>
-      val backupFile = state.tmpDir.get / s"backup-${timestamp}.sql"
-      // Execute pg_dump
-      val result = taskRunner.arbitraryExec(
-        state,
-        self,
-        os.proc("pg_dumpall", "-U", "postgres"),
-        carrier = (state, exitCode, stdout, stderr) =>
-          os.write(backupFile, stdout)
-          state.copy(
-            backupFile = Some(backupFile),
-            backupSize = os.size(backupFile)
-          )
-      )
-      result.withNotes(s"Backup size: ${friendlyFileSize(os.size(backupFile))}")
-    ,
-
-    Step.Arbitrary("Upload to cloud"): (state, self) =>
-      val uploadPath = s"backups/${state.backupFile.get.last}"
-      taskRunner.arbitraryExec(
-        state,
-        self,
-        os.proc("rclone", "copy", state.backupFile.get.toString, s"remote:$uploadPath"),
-        carrier = (state, _, _, _) => state.copy(uploadPath = uploadPath)
-      )
-  )
-
-  def bestEffortFollowups = Set(
-    Step.Arbitrary("Remove temporary backup"): (state, self) =>
-      state.backupFile.foreach(f => if os.exists(f) then os.remove(f))
-      Step.Result.zeroWithCarryForward(state)
-    ,
-
-    Step.Arbitrary("Remove temp directory"): (state, self) =>
-      state.tmpDir.foreach(d => if os.exists(d) then os.remove.all(d))
-      Step.Result.zeroWithCarryForward(state)
-  )
-
-// Configure SMTP per mailutil docs (e.g., via SMTP_PROPERTIES env var)
-// The given Try[Smtp.Context] is automatically provided
-
-val reporters: Set[Reporter] = Reporters.default(
-  from = Some("backups@example.com"),
-  to = Some("admin@example.com")
-)
-
-taskRunner.runAndReport(backupTask, reporters)
-```
-
-### Example 3: Multi-Step Deployment with Rollback
-
-```scala
-import com.mchange.sysadmin.taskrunner.*
-
-case class DeployState(
-  previousVersion: String = "",
-  newVersion: String = "",
-  backupPath: Option[os.Path] = None,
-  deploymentSuccessful: Boolean = false
-)
-
-val taskRunner = TaskRunner[DeployState]
-import taskRunner.{Task, Step}
-
-val deployTask = new Task:
-  def name = "Application Deployment"
-
-  def init = DeployState()
-
-  def bestEffortSetups = Set(
-    Step.Arbitrary("Check disk space"): (state, self) =>
-      val df = os.proc("df", "-h", "/var/www").call()
-      Step.Result(Some(0), df.out.text(), "", state)
-        .withNotes("Disk space check before deployment")
-    ,
-
-    Step.Exec("Backup current version",
-      List("cp", "-r", "/var/www/app", "/var/backups/app-backup"),
-      essential = Some(true)  // Make this essential!
-    )
-  )
-
-  def sequential = List(
-    Step.Arbitrary("Get current version"): (state, self) =>
-      val version = os.read(os.pwd / "current-version.txt").trim
-      Step.Result.onward(state.copy(previousVersion = version))
-    ,
-
-    Step.Arbitrary("Download new version"): (state, self) =>
-      val newVersion = "1.2.3"
-      taskRunner.arbitraryExec(
-        state,
-        self,
-        os.proc("wget", s"https://releases.example.com/app-${newVersion}.tar.gz"),
-        carrier = (state, _, _, _) => state.copy(newVersion = newVersion)
-      )
-    ,
-
-    Step.Exec("Extract new version",
-      List("tar", "xzf", "app-1.2.3.tar.gz", "-C", "/var/www/app")
-    ),
-
-    Step.Exec("Run database migrations",
-      List("/var/www/app/bin/migrate"),
-      isSuccess = run =>
-        // Migrations might return exit code 0 or 1 (no migrations needed)
-        run.result.exitCode.exists(code => code == 0 || code == 1)
-    ),
-
-    Step.Exec("Restart application",
-      List("systemctl", "restart", "myapp")
-    ),
-
-    Step.Arbitrary("Verify deployment"): (state, self) =>
-      Thread.sleep(5000)  // Wait for app to start
-      val result = taskRunner.arbitraryExec(
-        state,
-        self,
-        os.proc("curl", "-f", "http://localhost:8080/health"),
-        carrier = (state, exitCode, stdout, _) =>
-          state.copy(deploymentSuccessful = exitCode == 0)
-      )
-      result.withNotes(
-        if state.deploymentSuccessful then "Health check passed"
-        else "Health check failed!"
-      )
-  )
-
-  def bestEffortFollowups = Set(
-    Step.Arbitrary(
-      name = "Rollback if failed",
-      essential = Some(true)
-    ): (state, self) =>
-      if !state.deploymentSuccessful then
-        taskRunner.arbitraryExec(
-          state,
-          self,
-          os.proc("cp", "-r", "/var/backups/app-backup", "/var/www/app")
-        ).withNotes("Rolled back to previous version")
-      else
-        Step.Result.emptyWithCarryForward(state)
-          .withNotes("No rollback needed")
-  )
-
-val reporters: Set[Reporter] = Reporters.stdOutOnly()
-taskRunner.runAndReport(deployTask, reporters)
-```
-
-### Example 4: Parallel Setups and Followups
-
-```scala
-import com.mchange.sysadmin.taskrunner.*
-import scala.concurrent.ExecutionContext.Implicits.global
-
-val taskRunner = TaskRunner[Unit](
-  Parallelize(Parallelizable.Setups, Parallelizable.Followups)
-)
-import taskRunner.{Task, Step}
-
-val monitoringTask = new Task:
-  def name = "System Health Check"
-
-  def init = ()
-
-  // These will run in parallel
-  def bestEffortSetups = Set(
-    Step.Exec("Check web server", List("systemctl", "is-active", "nginx")),
-    Step.Exec("Check database", List("systemctl", "is-active", "postgresql")),
-    Step.Exec("Check cache", List("systemctl", "is-active", "redis")),
-    Step.Exec("Check disk space", List("df", "-h"))
-  )
-
-  def sequential = List(
-    Step.Exec("Generate health report",
-      List("./generate-health-report.sh")
-    )
-  )
-
-  // These will also run in parallel
-  def bestEffortFollowups = Set(
-    Step.Exec("Update monitoring dashboard",
-      List("./update-dashboard.sh")
-    ),
-    Step.Exec("Log to syslog",
-      List("logger", "Health check completed")
-    )
-  )
-
-val reporters: Set[Reporter] = Reporters.stdOutOnly()
-taskRunner.runAndReport(monitoringTask, reporters)
-```
-
----
-
 ## Best Practices
 
 ### 1. Choose the Right Carryforward Type
@@ -1134,7 +858,7 @@ taskRunner.runAndReport(monitoringTask, reporters)
 - Make critical cleanup steps essential (e.g., removing sensitive temporary files)
 - Don't make logging or notification steps essential
 
-### 4. Handle Errors Gracefully
+### 4. Customize Error-handling
 
 ```scala
 // Option 1: Catch error and continue (don't fail the task)
@@ -1147,17 +871,7 @@ Step.Arbitrary("Risky operation"): (state, self) =>
       // Return 0 to indicate success despite the error
       Step.Result(Some(0), "", e.getMessage, state)
 
-// Option 2: Catch error and fail gracefully (with proper error reporting)
-Step.Arbitrary("Important operation"): (state, self) =>
-  try
-    val result = performOperation()
-    Step.Result(Some(0), "Success", "", state.updated(result))
-  catch
-    case NonFatal(e) =>
-      // Return 1 to indicate failure - this WILL fail the task
-      Step.Result(Some(1), "", e.getMessage, state)
-
-// Option 3: Custom success criteria to accept certain failures
+// Option 2: Custom success criteria to accept certain failures
 Step.Arbitrary(
   name = "Flexible operation",
   isSuccess = run =>
@@ -1171,7 +885,7 @@ Step.Arbitrary(
     case NonFatal(e) =>
       Step.Result(Some(1), "", e.getMessage, state)
 
-// Option 4: Make the step non-essential so failures don't affect overall task
+// Option 3: Make the step non-essential so failures don't affect overall task
 Step.Arbitrary(
   name = "Optional operation",
   essential = Some(false) // Failure won't fail the overall task
@@ -1219,11 +933,10 @@ During development, use `silentRun` to test without sending emails:
 ```scala
 val run = taskRunner.silentRun(myTask)
 println(s"Success: ${run.success}")
-run.sequential.foreach {
+run.sequential.foreach:
   case completed: AnyStepRunCompleted =>
     println(s"${completed.step.name}: ${completed.success}")
   case _ => ()
-}
 ```
 
 ### 8. Parallelize Wisely
@@ -1239,55 +952,6 @@ run.sequential.foreach {
 // Use environment variables for configuration
 val dbHost = sys.env.getOrElse("DB_HOST", "localhost")
 val backupRetention = sys.env.get("BACKUP_RETENTION_DAYS").map(_.toInt).getOrElse(30)
-
-// Use Env.Optional for email configuration
-val from = Env.Optional.mailFrom
-val to = Env.Optional.mailTo
-```
-
-### 10. Reusable Task Patterns
-
-Since `Step` is a path-dependent type tied to a specific `TaskRunner` instance, create reusable patterns through abstract classes or traits:
-
-```scala
-// Abstract base for similar tasks
-abstract class DatabaseBackupTask[T](dbName: String) extends AnyRef:
-  val taskRunner: TaskRunner[T]
-  import taskRunner.{Task, Step}
-
-  def createTask: Task = new Task:
-    def name = s"Backup $dbName database"
-    def init = ???
-    def sequential = List(
-      Step.Exec("Dump database", dumpCommand),
-      Step.Exec("Upload backup", uploadCommand)
-    )
-    // ...
-
-  def dumpCommand: List[String]
-  def uploadCommand: List[String]
-
-// Concrete implementations
-class PostgresBackup extends DatabaseBackupTask[BackupState]("postgres"):
-  val taskRunner = TaskRunner[BackupState]
-  def dumpCommand = List("pg_dumpall", "-U", "postgres")
-  def uploadCommand = List("rclone", "copy", "backup.sql", "remote:")
-
-// Or use helper methods within a single task
-val taskRunner = TaskRunner[Unit]
-import taskRunner.{Task, Step}
-
-def diskSpaceCheck(path: os.Path) =
-  Step.Exec("Check disk space", List("df", "-h", path.toString))
-
-val myTask = new Task:
-  def name = "System Maintenance"
-  def init = ()
-  def bestEffortSetups = Set(
-    diskSpaceCheck(os.root / "var"),
-    diskSpaceCheck(os.root / "tmp")
-  )
-  // ...
 ```
 
 ---
@@ -1303,7 +967,6 @@ class TaskRunner[T](parallelize: Parallelize = Parallelize.Never)
 **Methods:**
 - `silentRun(task: Task): Task.Run` - Execute task without reporting
 - `runAndReport(task: Task, reporters: Set[Reporter]): Unit` - Execute and report
-- `arbitraryExec(prior: T, step: Step.Arbitrary, command: os.Shellable, carryForward: Carrier): Step.Result` - Execute command in arbitrary step
 
 **Type Members:**
 - `type Carrier = (T, Int, String, String) => T` - Function to extract data from command output
@@ -1414,19 +1077,6 @@ Step.Result.onward(newState)
 Step.Result.onward(newState, notes = Some("Operation completed successfully"))
 ```
 
-### Parallelize
-
-```scala
-sealed trait Parallelize
-
-object Parallelize:
-  case object Never extends Parallelize
-  case class Sometimes(...) extends Parallelize
-
-  def apply(first: Parallelizable, others: Parallelizable*)
-    (using ec: ExecutionContext): Parallelize
-```
-
 ### Parallelizable
 
 ```scala
@@ -1444,22 +1094,6 @@ object Reporters:
   def smtpOrFail(...)(using Try[Smtp.Context]): Set[Reporter]
   def smtpAndStdOut(...)(using Try[Smtp.Context]): Set[Reporter]
   def default(...)(using Try[Smtp.Context]): Set[Reporter]
-```
-
-### Env
-
-```scala
-object Env:
-  val MailTo: String   // "SYSADMIN_MAIL_TO"
-  val MailFrom: String // "SYSADMIN_MAIL_FROM"
-
-  object Optional:
-    def mailTo: Option[String]
-    def mailFrom: Option[String]
-
-  object Required:
-    def mailTo: String   // throws if missing
-    def mailFrom: String // throws if missing
 ```
 
 ### Type Aliases
@@ -1491,7 +1125,7 @@ type Reporter = AnyTaskRun => Unit
 ## Additional Resources
 
 - **Scaladoc**: https://javadoc.io/doc/com.mchange/mchange-sysadmin-scala_3
-- **Example Scripts**: https://github.com/swaldman/mchange-sysadmin-scripts
+- **Example Scripts**: https://github.com/swaldman/mchange-sysadmin-scripts (see the `taskbin/` directory)
 - **Source Code**: https://github.com/swaldman/mchange-sysadmin-scala
 - **os-lib Documentation**: https://github.com/com-lihaoyi/os-lib
 
