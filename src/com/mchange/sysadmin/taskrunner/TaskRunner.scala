@@ -71,6 +71,25 @@ class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
     def defaultIsSuccess(run : Step.Run.Completed) : Boolean = run.result.exitCode match
       case Some( exitCode ) => exitCode == 0
       case None             => run.result.stepErr.isEmpty
+    object Arbitrary:
+      def apply (
+        name : String,
+        isSuccess : Step.Run.Completed => Boolean = defaultIsSuccess,
+        workingDirectory : os.Path = os.pwd,
+        environment : immutable.Map[String,String] = sys.env,
+        actionDescription : Option[String] = None,
+        essential : Option[Boolean] = None
+      )( action : (T, Step.Arbitrary) => Result ): Arbitrary =
+        new Arbitrary( name, action, isSuccess, workingDirectory, environment, actionDescription, essential )
+      def apply (
+        name : String,
+        action : (T, Step.Arbitrary) => Result,
+        isSuccess : Step.Run.Completed => Boolean,
+        workingDirectory : os.Path,
+        environment : immutable.Map[String,String],
+        actionDescription : Option[String],
+        essential : Option[Boolean],
+      ) : Arbitrary = new Arbitrary( name, action, isSuccess, workingDirectory, environment, actionDescription, essential )
     case class Arbitrary (
       name : String,
       action : (T, Step.Arbitrary) => Result,
@@ -129,62 +148,13 @@ class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
 
   def arbitrary(
     name : String,
-    action : (T, Step.Arbitrary) => Step.Result,
     isSuccess : Step.Run.Completed => Boolean = Step.defaultIsSuccess,
     workingDirectory : os.Path = os.pwd,
     environment : immutable.Map[String,String] = sys.env,
-    actionDescription : Option[String] = None
-  ) : Step.Arbitrary =
-    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription)
-
-  /*
-  // grrr. it's very annoying that only one overload can have default args
-
-  def arbitrary(
-    name : String,
-    isSuccess : Step.Run.Completed => Boolean = Step.defaultIsSuccess,
-    workingDirectory : os.Path = os.pwd,
-    environment : immutable.Map[String,String] = sys.env,
-    actionDescription : Option[String] = None
+    actionDescription : Option[String] = None,
+    essential : Option[Boolean] = None
   )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
-    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription)
-  */
-
-  // unroll default args by hand
-  def arbitrary(
-    name : String,
-  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
-    Step.Arbitrary(name,action,Step.defaultIsSuccess,os.pwd,sys.env,None)
-
-  def arbitrary(
-    name : String,
-    isSuccess : Step.Run.Completed => Boolean,
-  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
-    Step.Arbitrary(name,action,isSuccess,os.pwd,sys.env,None)
-
-  def arbitrary(
-    name : String,
-    isSuccess : Step.Run.Completed => Boolean,
-    workingDirectory : os.Path
-  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
-    Step.Arbitrary(name,action,isSuccess,workingDirectory,sys.env,None)
-
-  def arbitrary(
-    name : String,
-    isSuccess : Step.Run.Completed => Boolean,
-    workingDirectory : os.Path,
-    environment : immutable.Map[String,String]
-  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
-    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,None)
-
-  def arbitrary(
-    name : String,
-    isSuccess : Step.Run.Completed => Boolean,
-    workingDirectory : os.Path,
-    environment : immutable.Map[String,String],
-    actionDescription : Option[String]
-  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
-    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription)
+    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription, essential)
 
   def exec(
     name : String,
