@@ -139,7 +139,7 @@ val myTask = new Task:
   def bestEffortFollowups = Set.empty
 
 // Run with stdout reporter
-val reporters: Set[Reporter] = Reporters.stdOutOnly()
+val reporters = Reporters.stdOutOnly()
 taskRunner.runAndReport(myTask, reporters)
 ```
 
@@ -270,8 +270,6 @@ val getHostname = Step.Exec(
 ```
 
 ### Step.Arbitrary - Custom Actions
-
-For arbitrary Scala code using colon-lambda syntax:
 
 ```scala
 // Simple case - just updating state
@@ -1025,12 +1023,13 @@ object Arbitrary:
   )(action: (T, Step.Arbitrary) => Result): Arbitrary
 ```
 
-**Recommended usage with colon-lambda syntax:**
+**Example:**
 
 ```scala
 // Minimal - just name and action
 Step.Arbitrary("Step name"): (state, self) =>
   // Action body
+  val updatedState = doStuff( state )
   Step.Result.onward(updatedState)
 
 // With optional parameters
@@ -1040,6 +1039,7 @@ Step.Arbitrary(
   essential = Some(true)
 ): (state, self) =>
   // Action body
+  val updatedState = doStuff( state )
   Step.Result.onward(updatedState)
 ```
 

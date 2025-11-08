@@ -6,7 +6,7 @@ Some tools for doing sysadmin scripting in Scala
 
 ### Cautious tasks with reports
 
-The main utility here is [`TaskRunner`](src/main/scala/com/mchange/sysadmin/TaskRunner.scala).
+The main utility here is [`TaskRunner`](src/com/mchange/sysadmin/taskrunner/TaskRunner.scala). Developer docs are now [available](doc/TaskRunner-Developer-Guide.md).
 
 The idea is you
 
@@ -178,7 +178,7 @@ Detailed text reports are also produced, in the logs (and as `text/plain` altern
 
 Includes some facilities to parse `nginx` logs.
 
-## Developer Docs
+## Dependencies
 
 Dependency Javadocs:
 * https://javadoc.io/doc/com.lihaoyi/pprint_3/latest/index.html
