@@ -6,7 +6,10 @@ Some tools for doing sysadmin scripting in Scala
 
 ### Cautious tasks with reports
 
-The main utility here is [`TaskRunner`](src/com/mchange/sysadmin/taskrunner/TaskRunner.scala). Developer docs are now [available](doc/TaskRunner-Developer-Guide.md).
+[`TaskRunner`](src/com/mchange/sysadmin/taskrunner/TaskRunner.scala) is a Scala 3 framework for building reliable, observable system administration scripts. 
+It provides a structured approach to executing tasks with comprehensive reporting, error handling, and state management.
+
+Developer docs are now [available](doc/TaskRunner-Developer-Guide.md).
 
 The idea is you
 

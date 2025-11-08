@@ -269,6 +269,8 @@ val getHostname = Step.Exec(
 )
 ```
 
+If you just want to carry the prior state forward, you can use a predefined `Carrier`, `carryPrior`.
+
 ### Step.Arbitrary - Custom Actions
 
 ```scala
@@ -353,7 +355,12 @@ Step.Exec(
 
 ### Helper Methods: arbitraryExec
 
-For running shell commands within arbitrary step actions:
+For running shell commands within arbitrary step actions.
+
+It returns a `Step.Result`, which will include the exit code of the exec'ed process, and which can be returned directly as the parent step's result,
+or accessed during continuing logic.
+
+You need to supply a `Carrier`, a function that determines what new state will appear in the returned result. If you just want to retain the prior state, you can use `carryPrior`.
 
 ```scala
 Step.Arbitrary("Complex operation"): (state, self) =>
