@@ -47,6 +47,7 @@ class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
         case other    => Some( pprint(other).plainText )
       def emptyWithCarryForward( t : T ) : Result = Result(None,"","",t)
       def zeroWithCarryForward( t : T ) : Result = Result(Some(0),"","",t)
+      def onward( carryForward : T, notes : Option[String] = None, carryForwardDescriber : T => Option[String] = defaultCarryForwardDescriber ) = Result(None,"","",carryForward,notes,carryForwardDescriber)
     case class Result(
       exitCode: Option[Int],
       stepOut : String,
