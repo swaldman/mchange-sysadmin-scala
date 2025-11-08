@@ -24,8 +24,8 @@ import com.mchange.conveniences
 import conveniences.throwable.*
 
 object TaskRunner:
-  def apply[T]( parallelize : Parallelize ) : TaskRunner[T] = new TaskRunner[T]( parallelize )
-  def apply[T]                              : TaskRunner[T] = new TaskRunner[T]( Parallelize.Never )
+  def apply[T]( parallelize : Parallelize = Parallelize.Never ) : TaskRunner[T] = new TaskRunner[T]( parallelize )
+  def apply[T] : TaskRunner[T] = new TaskRunner[T]( Parallelize.Never )
 class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
   object Carrier:
     val carryPrior : Carrier = (prior,_,_,_) => prior
@@ -135,6 +135,55 @@ class TaskRunner[T](parallelize : Parallelize = Parallelize.Never):
     environment : immutable.Map[String,String] = sys.env,
     actionDescription : Option[String] = None
   ) : Step.Arbitrary =
+    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription)
+
+  /*
+  // grrr. it's very annoying that only one overload can have default args
+
+  def arbitrary(
+    name : String,
+    isSuccess : Step.Run.Completed => Boolean = Step.defaultIsSuccess,
+    workingDirectory : os.Path = os.pwd,
+    environment : immutable.Map[String,String] = sys.env,
+    actionDescription : Option[String] = None
+  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
+    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription)
+  */
+
+  // unroll default args by hand
+  def arbitrary(
+    name : String,
+  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
+    Step.Arbitrary(name,action,Step.defaultIsSuccess,os.pwd,sys.env,None)
+
+  def arbitrary(
+    name : String,
+    isSuccess : Step.Run.Completed => Boolean,
+  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
+    Step.Arbitrary(name,action,isSuccess,os.pwd,sys.env,None)
+
+  def arbitrary(
+    name : String,
+    isSuccess : Step.Run.Completed => Boolean,
+    workingDirectory : os.Path
+  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
+    Step.Arbitrary(name,action,isSuccess,workingDirectory,sys.env,None)
+
+  def arbitrary(
+    name : String,
+    isSuccess : Step.Run.Completed => Boolean,
+    workingDirectory : os.Path,
+    environment : immutable.Map[String,String]
+  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
+    Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,None)
+
+  def arbitrary(
+    name : String,
+    isSuccess : Step.Run.Completed => Boolean,
+    workingDirectory : os.Path,
+    environment : immutable.Map[String,String],
+    actionDescription : Option[String]
+  )( action : (T, Step.Arbitrary) => Step.Result ) : Step.Arbitrary =
     Step.Arbitrary(name,action,isSuccess,workingDirectory,environment,actionDescription)
 
   def exec(
