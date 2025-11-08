@@ -105,11 +105,11 @@ Add to your `build.mill` (Mill) or `build.sbt` (SBT):
 ```scala
 // Mill 1.0.x
 def mvnDeps = Seq(
-  mvn"com.mchange::mchange-sysadmin-scala:0.2.0-SNAPSHOT"
+  mvn"com.mchange::mchange-sysadmin-scala:0.2.0"
 )
 
 // SBT
-libraryDependencies += "com.mchange" %% "mchange-sysadmin-scala" % "0.2.0-SNAPSHOT"
+libraryDependencies += "com.mchange" %% "mchange-sysadmin-scala" % "0.2.0"
 ```
 
 ### Minimal Example
@@ -1294,6 +1294,6 @@ But so far, we've never encountered a need for it.
 
 ---
 
-**Version**: 0.2.0-SNAPSHOT<br>
+**Version**: 0.2.0<br>
 **Last Updated**: 2024-11-08<br>
 **License**: Apache 2.0<br>
