@@ -1238,7 +1238,7 @@ But because all of these elements need to adhere to a common but parameterized t
 the carry forward state, everything had to be written in terms of 
 `Step[T]`, `Step.Result[T]`, `Step.Run[T]`, `Step.Completed[T]` etc.
 
-This got noisy and, seemed inconvenient to work with.
+This got noisy, seemed inconvenient to work with.
 
 The current, cleaner and simpler, API seemed woth accepting the oddness and complexity of dependent types.
 `import taskRunner.*` is not that big a deal.
