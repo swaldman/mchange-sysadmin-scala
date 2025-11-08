@@ -15,7 +15,7 @@ object `package` extends UntemplateModule with PublishModule:
 //    super.scalacOptions() ++ Seq("-explain")
 
   override def artifactName = "mchange-sysadmin-scala"
-  override def publishVersion = Task("0.1.5-SNAPSHOT")
+  override def publishVersion = Task("0.2.0-SNAPSHOT")
   override def pomSettings    = Task:
     PomSettings(
       description = "A library of utilities for sysadmin scripts",
