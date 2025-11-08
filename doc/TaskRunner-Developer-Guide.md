@@ -1255,7 +1255,7 @@ and this gives you access to the full API without ceremony.
 
 **2. Why does the library rely on dependent types?**
 
-Dependent types add extra complexity to the library. 
+Dependent types add extra complexity.
 
 Early version of the library just had top-level,
 independent types including `Step`, `Step.Result`, `Step.Run`, `Step.Completed`, etc. 
@@ -1274,8 +1274,8 @@ The current, cleaner and simpler, API seemed woth accepting the oddness and comp
 A `Task` was conceived as kind of a structured, instrumented shell script. The library began with `Step.Exec`,
 which literally just runs something and looks to the exit code for success or failure.
 
-The library was then generalized to include `Step.Arbitrary(...)`, which just executes some Scala task, and which
-has no natural integral "exit code" to signal success or failure.
+The library was then generalized to include `Step.Arbitrary(...)`, which just executes some Scala code, and which
+has no natural integer "exit code" to signal success or failure.
 
 But a Scala task also has no natural "standard error" output that must be captured. Nothing ever needs to be
 written into that element of the result.
@@ -1287,13 +1287,13 @@ and override this. But it's rare that you would have to for a `Step.Arbitrary`.)
 For now, an unhandled `Exception` just gets its stack trace written as "standard out", which by default gets interpreted
 as failure, and the prior state is carried forward. 
 
-In the future, there could be a user-defined function, perhaps `(T, Throwable) => T` or even `(T, Result) => Result`
-to override this behavior, and customize how different exceptions are interpreted or affect execution.
+In the future, we could add a user-definable function to Step, perhaps `(T, Throwable) => T` or even `(T, Result) => Result`,
+which could override this behavior, and customize how different exceptions are interpreted or affect execution.
 But so far, we've never encountered a need for it.
 
 
 ---
 
 **Version**: 0.2.0-SNAPSHOT<br>
-**Last Updated**: 2024-11-07<br>
+**Last Updated**: 2024-11-08<br>
 **License**: Apache 2.0<br>
