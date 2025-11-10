@@ -1297,5 +1297,4 @@ But so far, we've never encountered a need for it.
 ---
 
 **Version**: 0.2.0<br>
-**Last Updated**: 2024-11-08<br>
 **License**: Apache 2.0<br>
