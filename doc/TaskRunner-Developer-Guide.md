@@ -1,5 +1,7 @@
 # TaskRunner Developer Guide
 
+_**Note:** This documentation was [produced in collaboration with Claude code](https://tech.interfluidity.com/2025/11/08/sysadminning-in-scala-documenting-in-claude/index.html). Is it any good?_
+
 ## Table of Contents
 
 1. [Introduction](#introduction)
